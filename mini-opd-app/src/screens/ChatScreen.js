@@ -1,5 +1,5 @@
-import {decode as atob} from "base-64";
-import React, { useEffect, useState, useRef} from "react";
+import { decode as atob } from "base-64";
+import React, { useEffect, useState, useRef, useContext } from "react";
 import {
   View,
   Text,
@@ -9,70 +9,119 @@ import {
   TouchableOpacity
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Colors from "../utils/colors";
-import { getMessages, sendMessage } from "../services/api";
-import { useContext } from "react";
 import { ThemeContext } from "../context/ThemeContext";
+import { getMessages } from "../services/api";
+import { io } from "socket.io-client";
+
+const socket = io("https://online-mini-opd-production.up.railway.app");
 
 export default function ChatScreen({ route }) {
-
   const { appointmentId } = route.params;
   const { theme } = useContext(ThemeContext);
+
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [userId, setUserId] = useState("");
-
+  const [typingUser, setTypingUser] = useState(null);
+  const [onlineUsers, setOnlineUsers] = useState([]);
 
   const scrollViewRef = useRef();
 
-  // ✅ Load user ID from token
+  // ✅ Load user & messages
   useEffect(() => {
     loadUser();
     loadMessages();
   }, []);
 
+  // ✅ Load user ID from JWT
   const loadUser = async () => {
     const token = await AsyncStorage.getItem("token");
     if (!token) return;
 
-    const payload = JSON.parse(
-      atob(token.split(".")[1])
-    );
-
+    const payload = JSON.parse(atob(token.split(".")[1]));
     setUserId(payload.id);
+
+    // Join socket room AFTER userId is ready
+    socket.emit("joinRoom", {
+      appointmentId,
+      userId: payload.id
+    });
   };
 
-  // ✅ Load chat messages
+  // ✅ Load old messages from DB
   const loadMessages = async () => {
     const token = await AsyncStorage.getItem("token");
     const res = await getMessages(token, appointmentId);
     setMessages(res.data);
   };
 
+  // ✅ Real-time listeners
+  useEffect(() => {
+    socket.on("receiveMessage", (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    socket.on("userTyping", (user) => {
+      setTypingUser(user);
+    });
+
+    socket.on("stopTyping", () => {
+      setTypingUser(null);
+    });
+
+    socket.on("onlineUsers", (users) => {
+      setOnlineUsers(users);
+    });
+
+    return () => {
+      socket.off("receiveMessage");
+      socket.off("userTyping");
+      socket.off("stopTyping");
+      socket.off("onlineUsers");
+    };
+  }, []);
+
   // ✅ Send message
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!text.trim()) return;
 
-    const token = await AsyncStorage.getItem("token");
+    const newMessage = {
+      sender: userId,
+      text: text,
+      createdAt: new Date()
+    };
 
-    await sendMessage(token, appointmentId, text);
+    socket.emit("sendMessage", {
+      appointmentId,
+      message: newMessage
+    });
 
     setText("");
-    loadMessages();
+  };
+
+  // ✅ Typing event
+  const handleTyping = (value) => {
+    setText(value);
+
+    socket.emit("typing", {
+      appointmentId,
+      user: userId
+    });
+
+    setTimeout(() => {
+      socket.emit("stopTyping", { appointmentId });
+    }, 1000);
   };
 
   return (
     <View style={styles.container}>
-
       <ScrollView
         ref={scrollViewRef}
         onContentSizeChange={() =>
           scrollViewRef.current.scrollToEnd({ animated: true })
         }
       >
-
         {messages.map((msg, index) => {
-
           const isMine = msg.sender === userId;
 
           return (
@@ -90,21 +139,25 @@ export default function ChatScreen({ route }) {
           );
         })}
 
+        {typingUser && typingUser !== userId && (
+          <Text style={{ fontStyle: "italic", margin: 5 }}>
+            User is typing...
+          </Text>
+        )}
       </ScrollView>
 
       <View style={styles.inputContainer}>
         <TextInput
           placeholder="Type message..."
           value={text}
-          onChangeText={setText}
+          onChangeText={handleTyping}
           style={styles.input}
         />
 
         <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
-          <Text style={{ color: "#0f0f16" }}>Send</Text>
+          <Text style={{ color: "#fff" }}>Send</Text>
         </TouchableOpacity>
       </View>
-
     </View>
   );
 }
@@ -123,10 +176,12 @@ const styles = StyleSheet.create({
     maxWidth: "75%"
   },
   myMessage: {
-    alignSelf: "flex-end"
+    alignSelf: "flex-end",
+    backgroundColor: "#2a9dd6"
   },
   otherMessage: {
-    alignSelf: "flex-start"
+    alignSelf: "flex-start",
+    backgroundColor: "#ddd"
   },
   inputContainer: {
     flexDirection: "row",
@@ -138,7 +193,7 @@ const styles = StyleSheet.create({
     borderColor: "#13cbec",
     borderRadius: 20,
     paddingHorizontal: 15
-  }, 
+  },
   sendButton: {
     backgroundColor: "#2a9dd6",
     paddingHorizontal: 20,

@@ -14,7 +14,6 @@ const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
 
 app.get("/", (req, res) => {
   res.json({ message: "Mini OPD Backend is Running ✅" });
@@ -49,7 +48,6 @@ mongoose.connect(process.env.MONGO_URI)
 
 const PORT = process.env.PORT || 5000;
 
-const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
