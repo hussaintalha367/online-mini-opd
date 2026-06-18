@@ -9,8 +9,13 @@ const authRoutes = require("./routes/auth");
 const appointmentRoutes = require("./routes/appointment");
 const doctorRoutes = require("./routes/doctor");
 const adminRoutes = require("./routes/admin");
+const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
 app.get("/", (req, res) => {
   res.json({ message: "Mini OPD Backend is Running ✅" });
 });
@@ -44,6 +49,53 @@ mongoose.connect(process.env.MONGO_URI)
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+  },
+});
+
+const onlineUsers = new Map();
+
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  // User joins chat room (appointment based)
+  socket.on("joinRoom", ({ appointmentId, userId }) => {
+    socket.join(appointmentId);
+    onlineUsers.set(userId, socket.id);
+    io.emit("onlineUsers", Array.from(onlineUsers.keys()));
+  });
+
+  // Send message
+  socket.on("sendMessage", ({ appointmentId, message }) => {
+    io.to(appointmentId).emit("receiveMessage", message);
+  });
+
+  // Typing indicator
+  socket.on("typing", ({ appointmentId, user }) => {
+    socket.to(appointmentId).emit("userTyping", user);
+  });
+
+  socket.on("stopTyping", ({ appointmentId }) => {
+    socket.to(appointmentId).emit("stopTyping");
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+
+    for (let [key, value] of onlineUsers.entries()) {
+      if (value === socket.id) {
+        onlineUsers.delete(key);
+      }
+    }
+
+    io.emit("onlineUsers", Array.from(onlineUsers.keys()));
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
