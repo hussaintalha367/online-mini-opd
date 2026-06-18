@@ -68,9 +68,24 @@ io.on("connection", (socket) => {
   });
 
   // Send message
-  socket.on("sendMessage", ({ appointmentId, message }) => {
-    io.to(appointmentId).emit("receiveMessage", message);
-  });
+const Message = require("./models/Message");
+
+socket.on("sendMessage", async ({ appointmentId, message }) => {
+  try {
+    // ✅ Save to database
+    const newMessage = await Message.create({
+      appointment: appointmentId,
+      sender: message.sender,
+      text: message.text,
+    });
+
+    // ✅ Emit saved message
+    io.to(appointmentId).emit("receiveMessage", newMessage);
+
+  } catch (error) {
+    console.error("Message save error:", error);
+  }
+});
 
   // Typing indicator
   socket.on("typing", ({ appointmentId, user }) => {

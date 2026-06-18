@@ -15,21 +15,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.post("/book", auth, async (req, res) => {
-  const { doctorId, date, time } = req.body;
-
-  const appointment = new Appointment({
-    patient: req.user.id,
-    doctor: doctorId,
-    date,
-    time,
-    status: "pending"
-  });
-
-  await appointment.save();
-  res.json({ message: "Appointment booked ✅" });
-});
-
 router.put("/update-status/:id", auth, async (req, res) => {
   const { status } = req.body;
 
