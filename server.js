@@ -11,6 +11,9 @@ const doctorRoutes = require("./routes/doctor");
 const adminRoutes = require("./routes/admin");
 
 const app = express();
+app.get("/", (req, res) => {
+  res.json({ message: "Mini OPD Backend is Running ✅" });
+});
 
 // Security Middleware
 app.use(helmet());
