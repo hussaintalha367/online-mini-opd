@@ -1,5 +1,4 @@
-import { decode as atob } from "base-64";
-import React, { useEffect, useState, useRef, useContext } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,7 +8,7 @@ import {
   TouchableOpacity
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ThemeContext } from "../context/ThemeContext";
+import { decode as atob } from "base-64";
 import { getMessages } from "../services/api";
 import { io } from "socket.io-client";
 
@@ -17,48 +16,41 @@ const socket = io("https://online-mini-opd-production.up.railway.app");
 
 export default function ChatScreen({ route }) {
   const { appointmentId } = route.params;
-  const { theme } = useContext(ThemeContext);
 
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [userId, setUserId] = useState("");
   const [typingUser, setTypingUser] = useState(null);
-  const [onlineUsers, setOnlineUsers] = useState([]);
 
   const scrollViewRef = useRef();
 
-  // ✅ Load user & messages
+  // ✅ Load user and join socket room
   useEffect(() => {
-    loadUser();
-    loadMessages();
+    const initializeChat = async () => {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return;
+
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      setUserId(payload.id);
+
+      // ✅ Join appointment room
+      socket.emit("joinRoom", {
+        appointmentId,
+        userId: payload.id
+      });
+
+      // ✅ Load old messages from DB
+      const res = await getMessages(token, appointmentId);
+      setMessages(res.data);
+    };
+
+    initializeChat();
   }, []);
 
-  // ✅ Load user ID from JWT
-  const loadUser = async () => {
-    const token = await AsyncStorage.getItem("token");
-    if (!token) return;
-
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    setUserId(payload.id);
-
-    // Join socket room AFTER userId is ready
-    socket.emit("joinRoom", {
-      appointmentId,
-      userId: payload.id
-    });
-  };
-
-  // ✅ Load old messages from DB
-  const loadMessages = async () => {
-    const token = await AsyncStorage.getItem("token");
-    const res = await getMessages(token, appointmentId);
-    setMessages(res.data);
-  };
-
-  // ✅ Real-time listeners
+  // ✅ Socket listeners
   useEffect(() => {
-    socket.on("receiveMessage", (msg) => {
-      setMessages((prev) => [...prev, msg]);
+    socket.on("receiveMessage", (message) => {
+      setMessages((prev) => [...prev, message]);
     });
 
     socket.on("userTyping", (user) => {
@@ -69,15 +61,10 @@ export default function ChatScreen({ route }) {
       setTypingUser(null);
     });
 
-    socket.on("onlineUsers", (users) => {
-      setOnlineUsers(users);
-    });
-
     return () => {
       socket.off("receiveMessage");
       socket.off("userTyping");
       socket.off("stopTyping");
-      socket.off("onlineUsers");
     };
   }, []);
 
@@ -85,21 +72,20 @@ export default function ChatScreen({ route }) {
   const handleSend = () => {
     if (!text.trim()) return;
 
-    const newMessage = {
+    const messageData = {
       sender: userId,
-      text: text,
-      createdAt: new Date()
+      text: text
     };
 
     socket.emit("sendMessage", {
       appointmentId,
-      message: newMessage
+      message: messageData
     });
 
     setText("");
   };
 
-  // ✅ Typing event
+  // ✅ Typing handler
   const handleTyping = (value) => {
     setText(value);
 
@@ -140,9 +126,7 @@ export default function ChatScreen({ route }) {
         })}
 
         {typingUser && typingUser !== userId && (
-          <Text style={{ fontStyle: "italic", margin: 5 }}>
-            User is typing...
-          </Text>
+          <Text style={styles.typingText}>User is typing...</Text>
         )}
       </ScrollView>
 
@@ -169,7 +153,6 @@ const styles = StyleSheet.create({
     padding: 10
   },
   messageBubble: {
-    backgroundColor: "#939097",
     padding: 12,
     borderRadius: 20,
     marginVertical: 5,
@@ -182,6 +165,11 @@ const styles = StyleSheet.create({
   otherMessage: {
     alignSelf: "flex-start",
     backgroundColor: "#ddd"
+  },
+  typingText: {
+    fontStyle: "italic",
+    marginLeft: 10,
+    marginBottom: 5
   },
   inputContainer: {
     flexDirection: "row",
