@@ -14,7 +14,7 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
-router.post("/book", auth, async (req, res) => {
+router.post("/appointments/book", auth, async (req, res) => {
   try {
     const { doctorId, date, time } = req.body;
 
