@@ -2,18 +2,21 @@ const express = require("express");
 const Appointment = require("../models/Appointment");
 const Message = require("../models/Message");
 const auth = require("../middleware/authMiddleware");
-const multer = require("multer");
-
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: "./uploads",
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
-  }
-});
+const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("../config/cloudinary");
 
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "mini-opd",
+    allowed_formats: ["jpg", "png", "jpeg", "pdf"],
+  },
+});
 const upload = multer({ storage });
+
 router.post("/book", auth, async (req, res) => {
   try {
     const { doctorId, date, time } = req.body;
@@ -67,13 +70,21 @@ router.put("/cancel/:id", auth, async (req, res) => {
 });
 
 router.post("/upload/:id", auth, upload.single("file"), async (req, res) => {
-  await Appointment.findByIdAndUpdate(req.params.id, {
-    prescription: req.file.path
-  });
+  try {
+    const appointment = await Appointment.findById(req.params.id);
 
-  res.json({ message: "Prescription uploaded ✅" });
+    appointment.prescription = req.file.path;
+    await appointment.save();
+
+    res.json({
+      message: "Prescription uploaded ✅",
+      url: req.file.path,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Upload failed" });
+  }
 });
-
 router.post("/chat/:id", auth, async (req, res) => {
   const message = new Message({
     appointment: req.params.id,

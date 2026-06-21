@@ -17,7 +17,7 @@ import { useContext } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 
 export default function DoctorsScreen() {
-
+  const [mode, setMode] = useState("date");
   const [doctors, setDoctors] = useState([]);
   const [filteredDoctors, setFilteredDoctors] = useState([]);
   const [search, setSearch] = useState("");
@@ -109,26 +109,42 @@ export default function DoctorsScreen() {
             Select Date & Time
           </Text>
 
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => setShowPicker(true)}
-          >
-            <Text>{date.toLocaleString()}</Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+  style={styles.dateButton}
+  onPress={() => {
+    setMode("date");
+    setShowPicker(true);
+  }}
+>
+  <Text>
+  Select Date: {date ? new Date(date).toDateString() : ""}
+</Text>
+</TouchableOpacity>
 
-          {showPicker && (
-            <DateTimePicker
-              value={date}
-              mode="datetime"
-              display="default"
-              onChange={(event, selectedDate) => {
-                setShowPicker(false);
-                if (selectedDate) {
-                  setDate(selectedDate);
-                }
-              }}
-            />
-          )}
+<TouchableOpacity
+  style={styles.dateButton}
+  onPress={() => {
+    setMode("time");
+    setShowPicker(true);
+  }}
+>
+  <Text>Select Time: {date ? new Date(date).toLocaleTimeString() : ""}</Text>
+</TouchableOpacity>
+
+       {showPicker && (
+  <DateTimePicker
+    value={date instanceof Date ? date : new Date()}
+    mode={mode}
+    display="default"
+    onChange={(event, selectedDate) => {
+      setShowPicker(false);
+
+      if (selectedDate instanceof Date) {
+        setDate(selectedDate);
+      }
+    }}
+  />
+)}
 
           <CustomButton
             title="Confirm Appointment"
