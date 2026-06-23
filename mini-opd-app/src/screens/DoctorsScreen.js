@@ -136,7 +136,7 @@ export default function DoctorsScreen() {
     value={date instanceof Date ? date : new Date()}
     mode={mode}
     display="default"
-    onChange={(event, selectedDate) => {
+    onValueChange={(event, selectedDate) => {
       setShowPicker(false);
 
       if (selectedDate instanceof Date) {
