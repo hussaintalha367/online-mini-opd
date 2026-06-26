@@ -25,10 +25,21 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email });
-  if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
-  const match = await bcrypt.compare(password, user.password);
-  if (!match) return res.status(400).json({ message: "Invalid credentials" });
+  if (!user) {
+    return res.status(400).json({ message: "Invalid credentials" });
+  }
+
+  // ✅ Prevent blocked user login
+  if (user.isBlocked) {
+    return res.status(403).json({ message: "Account is blocked by admin" });
+  }
+
+  const isMatch = await bcrypt.compare(password, user.password);
+
+  if (!isMatch) {
+    return res.status(400).json({ message: "Invalid credentials" });
+  }
 
   const token = jwt.sign(
     { id: user._id, role: user.role },
@@ -40,10 +51,9 @@ router.post("/login", async (req, res) => {
     token,
     user: {
       id: user._id,
-      role: user.role,
-      name: user.name
+      name: user.name,
+      role: user.role
     }
   });
 });
-
 module.exports = router;
