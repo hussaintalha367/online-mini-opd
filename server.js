@@ -14,7 +14,14 @@ const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
+const rateLimit = require("express-rate-limit");
 
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP
+});
+
+app.use(limiter);
 app.get("/", (req, res) => {
   res.json({ message: "Mini OPD Backend is Running ✅" });
 });
