@@ -1,85 +1,133 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Alert
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import CustomButton from "../components/CustomButton";
-import Colors from "../utils/colors";
-import { useContext } from "react";
-import { ThemeContext } from "../context/ThemeContext";
-import {Switch } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { updateProfile, uploadProfileImage } from "../services/api";
 
-export default function ProfileScreen({ setRole }) {
-
-  const { theme, darkMode, setDarkMode } = useContext(ThemeContext);
-  const [role, setUserRole] = useState("");
-  const [token, setToken] = useState("");
+export default function ProfileScreen() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [image, setImage] = useState("");
 
   useEffect(() => {
     loadUser();
   }, []);
 
   const loadUser = async () => {
-    const savedRole = await AsyncStorage.getItem("role");
-    const savedToken = await AsyncStorage.getItem("token");
-
-    setUserRole(savedRole || "No Role Found");
-    setToken(savedToken ? "Logged In ✅" : "Not Logged In");
+    const user = JSON.parse(await AsyncStorage.getItem("user"));
+    if (user) {
+      setName(user.name);
+      setEmail(user.email);
+      setImage(user.profileImage);
+    }
   };
 
-  const logout = async () => {
-    await AsyncStorage.clear();
-    setRole(null);
+  const handleUpdate = async () => {
+    const token = await AsyncStorage.getItem("token");
+
+    try {
+      const res = await updateProfile(token, { name, email });
+      Alert.alert("Success ✅", "Profile Updated");
+      await AsyncStorage.setItem("user", JSON.stringify(res.data.user));
+    } catch {
+      Alert.alert("Error ❌", "Update Failed");
+    }
+  };
+
+  const handleImageUpload = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (result.canceled) return;
+
+    const token = await AsyncStorage.getItem("token");
+
+    const formData = new FormData();
+    formData.append("file", {
+      uri: result.assets[0].uri,
+      name: "profile.jpg",
+      type: "image/jpeg",
+    });
+
+    try {
+      const res = await uploadProfileImage(token, formData);
+      setImage(res.data.url);
+      Alert.alert("Success ✅", "Image Updated");
+    } catch {
+      Alert.alert("Upload Failed ❌");
+    }
   };
 
   return (
-  <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={styles.container}>
+      <TouchableOpacity onPress={handleImageUpload}>
+        <Image
+          source={
+            image
+              ? { uri: image }
+              : require("../../assets/profile.png")
+          }
+          style={styles.avatar}
+        />
+      </TouchableOpacity>
 
-    <Text style={[styles.title, { color: theme.colors.text }]}>
-      My Profile
-    </Text>
-
-    <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
-
-      <Text style={{ color: theme.colors.text }}>
-        Dark Mode
-      </Text>
-
-      <Switch 
-        value={darkMode}
-        onValueChange={setDarkMode}
+      <TextInput
+        value={name}
+        onChangeText={setName}
+        placeholder="Name"
+        style={styles.input}
       />
 
+      <TextInput
+        value={email}
+        onChangeText={setEmail}
+        placeholder="Email"
+        style={styles.input}
+      />
+
+      <TouchableOpacity style={styles.button} onPress={handleUpdate}>
+        <Text style={{ color: "#fff" }}>Save Changes</Text>
+      </TouchableOpacity>
     </View>
-
-    <CustomButton
-      title="Logout"
-      color={theme.colors.danger}
-      onPress={logout}
-    />
-
-  </View>
-);
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 20,
+    alignItems: "center",
+    backgroundColor: "#F4F6F7"
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     marginBottom: 20
   },
-  card: {
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 15,
-    elevation: 3
+  input: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 15
   },
-  label: {
-    fontWeight: "bold",
-  },
-  value: {
-    fontSize: 16,
-    marginTop: 5
+  button: {
+    backgroundColor: "#2E86C1",
+    padding: 12,
+    borderRadius: 10,
+    width: "100%",
+    alignItems: "center"
   }
 });

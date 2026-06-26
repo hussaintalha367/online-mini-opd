@@ -3,21 +3,48 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Joi = require("joi");
+const auth = require("../middleware/authMiddleware");
+
+const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("../config/cloudinary");
+
 const router = express.Router();
-const schema = Joi.object({
-  name: Joi.string().min(3).required(),
-  email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
-  role: Joi.string().valid("patient", "doctor").required()
+
+/* ---------------- CLOUDINARY STORAGE ---------------- */
+
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "mini-opd/profile",
+    allowed_formats: ["jpg", "png", "jpeg"],
+  },
 });
 
-const { error } = schema.validate(req.body);
+const upload = multer({ storage });
 
-if (error) {
-  return res.status(400).json({ message: error.details[0].message });
-}
+/* ---------------- REGISTER ---------------- */
+
 router.post("/register", async (req, res) => {
+  const schema = Joi.object({
+    name: Joi.string().min(3).required(),
+    email: Joi.string().email().required(),
+    password: Joi.string().min(6).required(),
+    role: Joi.string().valid("patient", "doctor").required()
+  });
+
+  const { error } = schema.validate(req.body);
+
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
   const { name, email, password, role } = req.body;
+
+  // ✅ Prevent public admin registration
+  if (role === "admin") {
+    return res.status(403).json({ message: "Admin cannot register publicly" });
+  }
 
   const existingUser = await User.findOne({ email });
 
@@ -32,7 +59,21 @@ router.post("/register", async (req, res) => {
 
   res.json({ message: "User registered ✅" });
 });
+
+/* ---------------- LOGIN ---------------- */
+
 router.post("/login", async (req, res) => {
+  const schema = Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string().required()
+  });
+
+  const { error } = schema.validate(req.body);
+
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
   const { email, password } = req.body;
 
   const user = await User.findOne({ email });
@@ -63,11 +104,15 @@ router.post("/login", async (req, res) => {
     user: {
       id: user._id,
       name: user.name,
-      role: user.role
+      email: user.email,
+      role: user.role,
+      profileImage: user.profileImage
     }
   });
 });
-//profile update route
+
+/* ---------------- UPDATE PROFILE ---------------- */
+
 router.put("/update-profile", auth, async (req, res) => {
   try {
     const { name, email } = req.body;
@@ -84,7 +129,9 @@ router.put("/update-profile", auth, async (req, res) => {
     res.status(500).json({ message: "Update failed" });
   }
 });
-//profile image upload route
+
+/* ---------------- UPLOAD PROFILE IMAGE ---------------- */
+
 router.post("/upload-profile", auth, upload.single("file"), async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -92,9 +139,14 @@ router.post("/upload-profile", auth, upload.single("file"), async (req, res) => 
     user.profileImage = req.file.path;
     await user.save();
 
-    res.json({ message: "Profile image updated ✅", url: req.file.path });
+    res.json({
+      message: "Profile image updated ✅",
+      url: req.file.path
+    });
   } catch (error) {
+    console.log(error);
     res.status(500).json({ message: "Upload failed" });
   }
 });
+
 module.exports = router;

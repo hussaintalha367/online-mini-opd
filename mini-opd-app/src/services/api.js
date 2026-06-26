@@ -52,3 +52,12 @@ export const getMessages = (token, id) =>
       headers: { Authorization: `Bearer ${token}` }
     }
   );
+  export const updateProfile = (token, data) =>
+  axios.put(`${BASE_URL}/auth/update-profile`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const uploadProfileImage = (token, formData) =>
+  axios.post(`${BASE_URL}/auth/upload-profile`, formData, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
