@@ -67,4 +67,34 @@ router.post("/login", async (req, res) => {
     }
   });
 });
+//profile update route
+router.put("/update-profile", auth, async (req, res) => {
+  try {
+    const { name, email } = req.body;
+
+    const user = await User.findById(req.user.id);
+
+    if (name) user.name = name;
+    if (email) user.email = email;
+
+    await user.save();
+
+    res.json({ message: "Profile updated ✅", user });
+  } catch (error) {
+    res.status(500).json({ message: "Update failed" });
+  }
+});
+//profile image upload route
+router.post("/upload-profile", auth, upload.single("file"), async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    user.profileImage = req.file.path;
+    await user.save();
+
+    res.json({ message: "Profile image updated ✅", url: req.file.path });
+  } catch (error) {
+    res.status(500).json({ message: "Upload failed" });
+  }
+});
 module.exports = router;

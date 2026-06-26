@@ -10,5 +10,6 @@ const userSchema = new mongoose.Schema({
   experience: Number
 }, { timestamps: true });
 userSchema.add({ isBlocked: { type: Boolean, default: false } });
+userSchema.add({ profileImage: { type: String, default: "" } });
 
 module.exports = mongoose.model("User", userSchema);
