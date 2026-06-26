@@ -159,13 +159,16 @@ const styles = StyleSheet.create({
     maxWidth: "75%"
   },
   myMessage: {
-    alignSelf: "flex-end",
-    backgroundColor: "#2a9dd6"
-  },
-  otherMessage: {
-    alignSelf: "flex-start",
-    backgroundColor: "#ddd"
-  },
+  alignSelf: "flex-end",
+  backgroundColor: "#2E86C1",
+  borderTopRightRadius: 0,
+},
+
+otherMessage: {
+  alignSelf: "flex-start",
+  backgroundColor: "#EAECEE",
+  borderTopLeftRadius: 0,
+},
   typingText: {
     fontStyle: "italic",
     marginLeft: 10,

@@ -125,22 +125,24 @@ if (!permission.granted) {
             <Text>Time: {item.time}</Text>
 
             {/* ✅ Status */}
-            <Text
-              style={{
-                fontWeight: "bold",
-                marginVertical: 5,
-                color:
-                  item.status === "pending"
-                    ? theme.colors.warning
-                    : item.status === "approved"
-                    ? theme.colors.success
-                    : item.status === "rejected"
-                    ? theme.colors.danger
-                    : theme.colors.text,
-              }}
-            >
-              Status: {item.status.toUpperCase()}
-            </Text>
+           <View
+  style={{
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    backgroundColor:
+      item.status === "approved"
+        ? theme.colors.success
+        : item.status === "pending"
+        ? theme.colors.warning
+        : theme.colors.danger,
+  }}
+>
+  <Text style={{ color: "#fff", fontWeight: "bold" }}>
+    {item.status.toUpperCase()}
+  </Text>
+</View>
 
             {/* ✅ Doctor Approve/Reject */}
             {item.status === "pending" && userRole === "doctor" && (
@@ -209,12 +211,18 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 10,
   },
-  card: {
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 12,
-    elevation: 4,
-  },
+  
+    card: {
+  backgroundColor: "#fff",
+  padding: 16,
+  borderRadius: 15,
+  marginBottom: 15,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.1,
+  shadowRadius: 8,
+  elevation: 5,
+},
   empty: {
     textAlign: "center",
     marginTop: 30,

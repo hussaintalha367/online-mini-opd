@@ -16,16 +16,16 @@ export default function CustomButton({ title, onPress, color }) {
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    marginVertical: 8,
-    elevation: 3
-  },
-  text: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-    letterSpacing: 0.5
-  }
+  backgroundColor: "#2E86C1",
+  padding: 12,
+  borderRadius: 10,
+  marginVertical: 5,
+  alignItems: "center",
+},
+text: {
+  color: "#fff",
+  fontWeight: "bold",
+},
 });
+
+export { };

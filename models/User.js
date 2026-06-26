@@ -9,5 +9,6 @@ const userSchema = new mongoose.Schema({
   specialization: String,
   experience: Number
 }, { timestamps: true });
+userSchema.add({ isBlocked: { type: Boolean, default: false } });
 
 module.exports = mongoose.model("User", userSchema);

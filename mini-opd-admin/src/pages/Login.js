@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Box, TextField, Button, Paper, Typography } from "@mui/material";
 import { loginAdmin } from "../services/api";
 
 export default function Login({ setToken }) {
@@ -15,29 +16,50 @@ export default function Login({ setToken }) {
       }
 
       setToken(res.data.token);
-    } catch (err) {
+    } catch {
       alert("Login failed ❌");
     }
   };
 
   return (
-    <div style={{ padding: 40 }}>
-      <h2>Admin Login</h2>
+    <Box
+      sx={{
+        height: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#F4F6F7",
+      }}
+    >
+      <Paper sx={{ padding: 4, width: 400 }}>
+        <Typography variant="h5" gutterBottom>
+          Admin Login
+        </Typography>
 
-      <input
-        placeholder="Email"
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <br /><br />
+        <TextField
+          fullWidth
+          label="Email"
+          margin="normal"
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-      <input
-        type="password"
-        placeholder="Password"
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <br /><br />
+        <TextField
+          fullWidth
+          type="password"
+          label="Password"
+          margin="normal"
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-      <button onClick={handleLogin}>Login</button>
-    </div>
+        <Button
+          fullWidth
+          variant="contained"
+          sx={{ mt: 2 }}
+          onClick={handleLogin}
+        >
+          Login
+        </Button>
+      </Paper>
+    </Box>
   );
 }
