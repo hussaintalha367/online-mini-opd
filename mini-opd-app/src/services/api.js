@@ -61,3 +61,24 @@ export const uploadProfileImage = (token, formData) =>
   axios.post(`${BASE_URL}/auth/upload-profile`, formData, {
     headers: { Authorization: `Bearer ${token}` }
   });
+
+/* ── Admin APIs ── */
+export const getAllUsers = (token) =>
+  axios.get(`${BASE_URL}/admin/users`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const getAllAppointments = (token) =>
+  axios.get(`${BASE_URL}/admin/appointments`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const blockUser = (token, id) =>
+  axios.put(`${BASE_URL}/admin/block/${id}`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const unblockUser = (token, id) =>
+  axios.put(`${BASE_URL}/admin/unblock/${id}`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });

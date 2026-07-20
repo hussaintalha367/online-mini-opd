@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, ActivityIndicator } from "react-native";
+import { View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -16,79 +16,123 @@ import DoctorsScreen from "./src/screens/DoctorsScreen";
 import AppointmentsScreen from "./src/screens/AppointmentsScreen";
 import ChatScreen from "./src/screens/ChatScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
-
-import Colors from "./src/utils/colors";
-import { ThemeProvider } from "./src/context/ThemeContext";
 import DoctorDetailsScreen from "./src/screens/DoctorDetailsScreen";
+import Loader from "./src/components/Loader";
+
+import { ThemeProvider } from "./src/context/ThemeContext";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-/* ✅ PATIENT TABS */
+/* Tab bar style shared across both roles */
+const TAB_OPTIONS = (route) => ({
+  headerShown: false,
+  tabBarActiveTintColor: "#1565C0",
+  tabBarInactiveTintColor: "#90A4AE",
+  tabBarStyle: {
+    height: 60,
+    paddingBottom: 8,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: "#E8ECF4",
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+  },
+  tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+});
+
+/* ── PATIENT TABS ── */
 function PatientTabs({ setRole }) {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="PatientMain">
         {() => (
-          <Tab.Navigator
-            screenOptions={({ route }) => ({
-              headerShown: false,
-              tabBarActiveTintColor: Colors.primary,
-              tabBarIcon: ({ color, size }) => {
-                let iconName;
-
-                if (route.name === "Doctors") {
-                  iconName = "medkit";
-                } else if (route.name === "Appointments") {
-                  iconName = "calendar";
-                } else if (route.name === "Profile") {
-                  iconName = "person";
-                }
-
-                return <Ionicons name={iconName} size={size} color={color} />;
-              }
-            })}
-          >
-            <Tab.Screen name="Doctors" component={DoctorsScreen} />
-            <Tab.Screen name="Appointments" component={AppointmentsScreen} />
-            <Tab.Screen name="Profile">
+          <Tab.Navigator screenOptions={({ route }) => TAB_OPTIONS(route)}>
+            <Tab.Screen
+              name="Home"
+              component={PatientDashboard}
+              options={{
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="home-outline" size={size} color={color} />
+                ),
+              }}
+            />
+            <Tab.Screen
+              name="Doctors"
+              component={DoctorsScreen}
+              options={{
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="medkit-outline" size={size} color={color} />
+                ),
+              }}
+            />
+            <Tab.Screen
+              name="Appointments"
+              component={AppointmentsScreen}
+              options={{
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="calendar-outline" size={size} color={color} />
+                ),
+              }}
+            />
+            <Tab.Screen
+              name="Profile"
+              options={{
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="person-outline" size={size} color={color} />
+                ),
+              }}
+            >
               {(props) => <ProfileScreen {...props} setRole={setRole} />}
             </Tab.Screen>
           </Tab.Navigator>
         )}
       </Stack.Screen>
-      <Stack.Screen name="DoctorDetails" component={DoctorDetailsScreen} />
 
+      <Stack.Screen name="DoctorDetails" component={DoctorDetailsScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
     </Stack.Navigator>
   );
 }
 
-/* ✅ DOCTOR TABS */
+/* ── DOCTOR TABS ── */
 function DoctorTabs({ setRole }) {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="DoctorMain">
         {() => (
-          <Tab.Navigator
-            screenOptions={({ route }) => ({
-              headerShown: false,
-              tabBarActiveTintColor: Colors.primary,
-              tabBarIcon: ({ color, size }) => {
-                let iconName;
-
-                if (route.name === "Appointments") {
-                  iconName = "calendar";
-                } else if (route.name === "Profile") {
-                  iconName = "person";
-                }
-
-                return <Ionicons name={iconName} size={size} color={color} />;
-              }
-            })}
-          >
-            <Tab.Screen name="Appointments" component={AppointmentsScreen} />
-            <Tab.Screen name="Profile">
+          <Tab.Navigator screenOptions={({ route }) => TAB_OPTIONS(route)}>
+            <Tab.Screen
+              name="Home"
+              component={DoctorDashboard}
+              options={{
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="home-outline" size={size} color={color} />
+                ),
+              }}
+            >
+              {(props) => <DoctorDashboard {...props} setRole={setRole} />}
+            </Tab.Screen>
+            <Tab.Screen
+              name="Appointments"
+              component={AppointmentsScreen}
+              options={{
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="calendar-outline" size={size} color={color} />
+                ),
+              }}
+            />
+            <Tab.Screen
+              name="Profile"
+              options={{
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="person-outline" size={size} color={color} />
+                ),
+              }}
+            >
               {(props) => <ProfileScreen {...props} setRole={setRole} />}
             </Tab.Screen>
           </Tab.Navigator>
@@ -100,51 +144,51 @@ function DoctorTabs({ setRole }) {
   );
 }
 
-/* ✅ MAIN APP */
+/* ── MAIN APP ── */
 export default function App() {
-
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setShowSplash(false);
       checkUser();
-    }, 2500);
+    }, 2600);
+    return () => clearTimeout(timer);
   }, []);
 
   const checkUser = async () => {
-    const savedRole = await AsyncStorage.getItem("role");
-    if (savedRole) setRole(savedRole);
+    try {
+      const savedRole = await AsyncStorage.getItem("role");
+      if (savedRole) setRole(savedRole);
+    } catch (_) {}
     setLoading(false);
   };
 
-  if (loading) {
+  if (showSplash) {
     return (
-      <View style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center"
-      }}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
+      <ThemeProvider>
+        <NavigationContainer>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="Splash" component={SplashScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </ThemeProvider>
     );
+  }
+
+  if (loading) {
+    return <Loader message="Starting up..." />;
   }
 
   return (
     <ThemeProvider>
       <NavigationContainer>
-
         <Stack.Navigator screenOptions={{ headerShown: false }}>
 
-          {/* ✅ Splash */}
-          {showSplash && (
-            <Stack.Screen name="Splash" component={SplashScreen} />
-          )}
-
-          {/* ✅ Auth Screens */}
-          {!showSplash && role === null && (
+          {/* Auth */}
+          {role === null && (
             <>
               <Stack.Screen name="Login">
                 {(props) => <LoginScreen {...props} setRole={setRole} />}
@@ -153,29 +197,28 @@ export default function App() {
             </>
           )}
 
-          {/* ✅ Patient Area */}
-          {!showSplash && role === "patient" && (
+          {/* Patient */}
+          {role === "patient" && (
             <Stack.Screen name="PatientHome">
               {(props) => <PatientTabs {...props} setRole={setRole} />}
             </Stack.Screen>
           )}
 
-          {/* ✅ Doctor Area */}
-          {!showSplash && role === "doctor" && (
+          {/* Doctor */}
+          {role === "doctor" && (
             <Stack.Screen name="DoctorHome">
               {(props) => <DoctorTabs {...props} setRole={setRole} />}
             </Stack.Screen>
           )}
 
-          {/* ✅ Admin Area */}
-          {!showSplash && role === "admin" && (
+          {/* Admin */}
+          {role === "admin" && (
             <Stack.Screen name="AdminDashboard">
               {(props) => <AdminDashboard {...props} setRole={setRole} />}
             </Stack.Screen>
           )}
 
         </Stack.Navigator>
-
       </NavigationContainer>
     </ThemeProvider>
   );

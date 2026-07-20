@@ -1,19 +1,21 @@
 import React, { useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ThemeProvider, CssBaseline } from "@mui/material";
+import theme from "./theme";
+
 import Login from "./pages/Login";
+import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import Appointments from "./pages/Appointments";
-import Layout from "./components/Layout";
-import { ThemeProvider } from "@mui/material/styles";
-import theme from "./theme";
 
 function App() {
   const [token, setToken] = useState(null);
-  const [page, setPage] = useState("dashboard");
 
   if (!token) {
     return (
       <ThemeProvider theme={theme}>
+        <CssBaseline />
         <Login setToken={setToken} />
       </ThemeProvider>
     );
@@ -21,11 +23,17 @@ function App() {
 
   return (
     <ThemeProvider theme={theme}>
-      <Layout setPage={setPage}>
-        {page === "dashboard" && <Dashboard token={token} />}
-        {page === "users" && <Users token={token} />}
-        {page === "appointments" && <Appointments token={token} />}
-      </Layout>
+      <CssBaseline />
+      <BrowserRouter>
+        <Layout setToken={setToken}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard"    element={<Dashboard    token={token} />} />
+            <Route path="/users"        element={<Users        token={token} />} />
+            <Route path="/appointments" element={<Appointments token={token} />} />
+          </Routes>
+        </Layout>
+      </BrowserRouter>
     </ThemeProvider>
   );
 }
