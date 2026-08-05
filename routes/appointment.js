@@ -37,23 +37,33 @@ router.post("/book", auth, async (req, res) => {
   }
 });
 router.put("/update-status/:id", auth, async (req, res) => {
-  const { status } = req.body;
+  try {
+    const { status, reason } = req.body;
+    const validStatuses = ["approved", "rejected", "completed", "cancelled"];
 
-  const appointment = await Appointment.findById(req.params.id);
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
 
-  if (!appointment) {
-    return res.status(404).json({ message: "Appointment not found" });
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    // Only doctor can approve/reject/complete
+    if (["approved", "rejected", "completed"].includes(status) && req.user.role !== "doctor") {
+      return res.status(403).json({ message: "Only doctors can perform this action" });
+    }
+
+    appointment.status = status;
+    if (reason) appointment.reason = reason;
+    await appointment.save();
+
+    res.json({ message: "Status updated ✅", appointment });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
-
-  // Only doctor can approve/reject
-  if (req.user.role !== "doctor") {
-    return res.status(403).json({ message: "Access denied" });
-  }
-
-  appointment.status = status;
-  await appointment.save();
-
-  res.json({ message: "Status updated ✅" });
 });
 
 router.get("/my", auth, async (req, res) => {
@@ -85,6 +95,30 @@ router.post("/upload/:id", auth, upload.single("file"), async (req, res) => {
     res.status(500).json({ message: "Upload failed" });
   }
 });
+// ✅ Get appointment stats for current user (for dashboard)
+router.get("/stats", auth, async (req, res) => {
+  try {
+    const query = req.user.role === "doctor"
+      ? { doctor: req.user.id }
+      : { patient: req.user.id };
+
+    const all = await Appointment.find(query);
+
+    const stats = {
+      total:     all.length,
+      pending:   all.filter(a => a.status === "pending").length,
+      approved:  all.filter(a => a.status === "approved").length,
+      completed: all.filter(a => a.status === "completed").length,
+      rejected:  all.filter(a => a.status === "rejected").length,
+      cancelled: all.filter(a => a.status === "cancelled").length,
+    };
+
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 router.post("/chat/:id", auth, async (req, res) => {
   const message = new Message({
     appointment: req.params.id,

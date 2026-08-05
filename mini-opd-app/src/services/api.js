@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "https://online-mini-opd-production.up.railway.app/api";
+const BASE_URL = "http://192.168.1.43:5000/api";
 
 export const loginUser = (email, password) =>
   axios.post(`${BASE_URL}/auth/login`, { email, password });
@@ -62,6 +62,11 @@ export const uploadProfileImage = (token, formData) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
+export const getAppointmentStats = (token) =>
+  axios.get(`${BASE_URL}/appointments/stats`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
 /* ── Admin APIs ── */
 export const getAllUsers = (token) =>
   axios.get(`${BASE_URL}/admin/users`, {
@@ -75,6 +80,11 @@ export const getAllAppointments = (token) =>
 
 export const blockUser = (token, id) =>
   axios.put(`${BASE_URL}/admin/block/${id}`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+export const deleteUser = (token, id) =>
+  axios.delete(`${BASE_URL}/admin/users/${id}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
 

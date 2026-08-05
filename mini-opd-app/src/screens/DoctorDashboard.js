@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,33 +7,65 @@ import {
   TouchableOpacity,
   StatusBar,
   Image,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { ThemeContext } from "../context/ThemeContext";
+import { getAppointmentStats } from "../services/api";
 
 const tips = [
   "Check all pending appointments regularly.",
   "Upload prescriptions promptly after consultations.",
   "Keep your profile and specialization up to date.",
   "Respond to patient messages in a timely manner.",
+  "Maintain clear and detailed consultation notes.",
 ];
 
 export default function DoctorDashboard({ navigation }) {
   const { theme } = useContext(ThemeContext);
-  const [user, setUser] = useState({ name: "Doctor" });
-  const [tip] = useState(tips[Math.floor(Math.random() * tips.length)]);
 
-  useEffect(() => {
-    loadUser();
-  }, []);
+  const [user, setUser]               = useState({ name: "Doctor" });
+  const [stats, setStats]             = useState(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [refreshing, setRefreshing]   = useState(false);
+  const [tip]                         = useState(tips[Math.floor(Math.random() * tips.length)]);
 
   const loadUser = async () => {
     try {
       const raw = await AsyncStorage.getItem("user");
       if (raw) setUser(JSON.parse(raw));
     } catch (_) {}
+  };
+
+  const loadStats = async (silent = false) => {
+    if (!silent) setLoadingStats(true);
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const res   = await getAppointmentStats(token);
+      setStats(res.data);
+    } catch (_) {
+      setStats(null);
+    } finally {
+      setLoadingStats(false);
+      setRefreshing(false);
+    }
+  };
+
+  /* Refresh on tab focus */
+  useFocusEffect(
+    useCallback(() => {
+      loadUser();
+      loadStats(true);
+    }, [])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadStats(true);
   };
 
   const greeting = () => {
@@ -47,6 +79,9 @@ export default function DoctorDashboard({ navigation }) {
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#00695C"]} />
+      }
     >
       <StatusBar barStyle="light-content" backgroundColor="#00695C" />
 
@@ -79,6 +114,64 @@ export default function DoctorDashboard({ navigation }) {
         </View>
       </LinearGradient>
 
+      {/* ── Stats Row (Real Data) ── */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Overview</Text>
+
+        {loadingStats ? (
+          <View style={styles.statsLoader}>
+            <ActivityIndicator color="#00695C" />
+            <Text style={styles.statsLoaderText}>Loading stats…</Text>
+          </View>
+        ) : (
+          <View style={styles.statsGrid}>
+            {[
+              {
+                icon: "people",
+                label: "Total Patients",
+                value: stats ? stats.total : 0,
+                color: "#1565C0",
+                bg: "#E3F2FD",
+              },
+              {
+                icon: "time-outline",
+                label: "Pending",
+                value: stats ? stats.pending : 0,
+                color: "#E65100",
+                bg: "#FFF3E0",
+              },
+              {
+                icon: "checkmark-circle",
+                label: "Approved",
+                value: stats ? stats.approved : 0,
+                color: "#2E7D32",
+                bg: "#E8F5E9",
+              },
+              {
+                icon: "checkmark-done-circle",
+                label: "Completed",
+                value: stats ? stats.completed : 0,
+                color: "#00695C",
+                bg: "#E0F2F1",
+              },
+            ].map((s) => (
+              <TouchableOpacity
+                key={s.label}
+                style={[styles.statCard, { backgroundColor: s.bg }]}
+                onPress={() => navigation.navigate("Appointments")}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.statIcon, { backgroundColor: s.color }]}>
+                  <Ionicons name={s.icon} size={20} color="#fff" />
+                </View>
+                <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
+                <Text style={styles.statLabel}>{s.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+
       {/* ── Quick Actions ── */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Quick Actions</Text>
@@ -94,7 +187,7 @@ export default function DoctorDashboard({ navigation }) {
             <Text style={[styles.actionLabel, { color: "#00695C" }]}>
               My Appointments
             </Text>
-            <Text style={styles.actionSub}>View & manage all</Text>
+            <Text style={styles.actionSub}>View &amp; manage all</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -108,28 +201,38 @@ export default function DoctorDashboard({ navigation }) {
             <Text style={[styles.actionLabel, { color: "#4527A0" }]}>
               My Profile
             </Text>
-            <Text style={styles.actionSub}>Update info & photo</Text>
+            <Text style={styles.actionSub}>Update info &amp; photo</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* ── Stats Row ── */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>Overview</Text>
-        <View style={styles.statsRow}>
-          {[
-            { icon: "people",          label: "Total Patients",  color: "#1565C0", bg: "#E3F2FD" },
-            { icon: "checkmark-circle", label: "Completed",      color: "#2E7D32", bg: "#E8F5E9" },
-            { icon: "time",            label: "Pending",         color: "#E65100", bg: "#FFF3E0" },
-          ].map((s) => (
-            <View key={s.label} style={[styles.statCard, { backgroundColor: s.bg }]}>
-              <Ionicons name={s.icon} size={24} color={s.color} />
-              <Text style={[styles.statValue, { color: s.color }]}>—</Text>
-              <Text style={styles.statLabel}>{s.label}</Text>
-            </View>
-          ))}
+      {/* ── Pending Alert Banner ── */}
+      {stats && stats.pending > 0 && (
+        <View style={styles.section}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate("Appointments")}
+          >
+            <LinearGradient
+              colors={["#E65100", "#F4511E"]}
+              style={styles.alertBanner}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <View style={styles.alertIconBox}>
+                <Ionicons name="alert-circle" size={28} color="#fff" />
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.alertTitle}>
+                  {stats.pending} Pending {stats.pending === 1 ? "Request" : "Requests"}
+                </Text>
+                <Text style={styles.alertSub}>Tap to review and respond</Text>
+              </View>
+              <Ionicons name="arrow-forward-circle" size={28} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
-      </View>
+      )}
 
       {/* ── CTA ── */}
       <View style={styles.section}>
@@ -144,8 +247,8 @@ export default function DoctorDashboard({ navigation }) {
             end={{ x: 1, y: 0 }}
           >
             <View style={{ flex: 1 }}>
-              <Text style={styles.ctaTitle}>Pending Appointments</Text>
-              <Text style={styles.ctaSub}>Review and approve patient requests</Text>
+              <Text style={styles.ctaTitle}>All Appointments</Text>
+              <Text style={styles.ctaSub}>View and manage patient requests</Text>
             </View>
             <Ionicons name="arrow-forward-circle" size={36} color="#fff" />
           </LinearGradient>
@@ -159,6 +262,8 @@ export default function DoctorDashboard({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+
+  /* Banner */
   banner: {
     paddingTop: 54,
     paddingBottom: 24,
@@ -171,9 +276,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 14,
   },
-  greetText: { color: "rgba(255,255,255,0.8)", fontSize: 14 },
-  nameText: { color: "#fff", fontSize: 22, fontWeight: "bold", marginTop: 2 },
-  bannerSub: { color: "rgba(255,255,255,0.7)", fontSize: 13, marginTop: 4 },
+  greetText:  { color: "rgba(255,255,255,0.8)", fontSize: 14 },
+  nameText:   { color: "#fff", fontSize: 22, fontWeight: "bold", marginTop: 2 },
+  bannerSub:  { color: "rgba(255,255,255,0.7)", fontSize: 13, marginTop: 4 },
   avatar: {
     width: 60, height: 60, borderRadius: 30,
     borderWidth: 2, borderColor: "rgba(255,255,255,0.6)",
@@ -194,8 +299,39 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tipText: { color: "#fff", fontSize: 12, flex: 1 },
-  section: { paddingHorizontal: 20, marginTop: 24 },
+
+  /* Sections */
+  section:      { paddingHorizontal: 20, marginTop: 24 },
   sectionTitle: { fontSize: 17, fontWeight: "bold", marginBottom: 14 },
+
+  /* Stats loader */
+  statsLoader: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingVertical: 16, justifyContent: "center",
+  },
+  statsLoaderText: { color: "#888", fontSize: 13 },
+
+  /* Stats Grid */
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  statCard: {
+    width: "46%",
+    borderRadius: 18,
+    padding: 14,
+    alignItems: "center",
+    gap: 8,
+  },
+  statIcon: {
+    width: 44, height: 44, borderRadius: 12,
+    justifyContent: "center", alignItems: "center",
+  },
+  statValue: { fontSize: 24, fontWeight: "bold" },
+  statLabel: { fontSize: 11, color: "#555", textAlign: "center" },
+
+  /* Action cards */
   actionRow: { flexDirection: "row", gap: 12 },
   actionCard: {
     flex: 1, borderRadius: 18, padding: 16, alignItems: "center", gap: 8,
@@ -205,20 +341,28 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center",
   },
   actionLabel: { fontWeight: "bold", fontSize: 14, textAlign: "center" },
-  actionSub: { fontSize: 11, color: "#777", textAlign: "center" },
-  statsRow: { flexDirection: "row", gap: 10 },
-  statCard: {
-    flex: 1, borderRadius: 16, padding: 14,
-    alignItems: "center", gap: 6,
-  },
-  statValue: { fontSize: 20, fontWeight: "bold" },
-  statLabel: { fontSize: 11, color: "#555", textAlign: "center" },
-  ctaBanner: {
+  actionSub:   { fontSize: 11, color: "#777", textAlign: "center" },
+
+  /* Alert Banner */
+  alertBanner: {
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 20,
-    padding: 20,
+    padding: 16,
+  },
+  alertIconBox: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center", alignItems: "center",
+  },
+  alertTitle: { color: "#fff", fontSize: 15, fontWeight: "bold" },
+  alertSub:   { color: "rgba(255,255,255,0.8)", fontSize: 12, marginTop: 2 },
+
+  /* CTA */
+  ctaBanner: {
+    flexDirection: "row", alignItems: "center",
+    borderRadius: 20, padding: 20,
   },
   ctaTitle: { color: "#fff", fontSize: 17, fontWeight: "bold" },
-  ctaSub: { color: "rgba(255,255,255,0.8)", fontSize: 12, marginTop: 4 },
+  ctaSub:   { color: "rgba(255,255,255,0.8)", fontSize: 12, marginTop: 4 },
 });

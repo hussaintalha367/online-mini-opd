@@ -18,18 +18,47 @@ router.get("/appointments", auth, roleMiddleware("admin"), async (req, res) => {
     .populate("patient doctor");
   res.json(appointments);
 });
-// ✅ Block / Unblock user
+// ✅ Block user
 router.put("/block/:id", auth, roleMiddleware("admin"), async (req, res) => {
-  const user = await User.findById(req.params.id);
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
+    user.isBlocked = true;
+    await user.save();
+
+    res.json({ message: "User blocked ✅", isBlocked: user.isBlocked });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
   }
+});
 
-  user.isBlocked = !user.isBlocked;
-  await user.save();
+// ✅ Unblock user (separate route — fixes mobile app /admin/unblock/:id call)
+router.put("/unblock/:id", auth, roleMiddleware("admin"), async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-  res.json({ message: "User status updated ✅" });
+    user.isBlocked = false;
+    await user.save();
+
+    res.json({ message: "User unblocked ✅", isBlocked: user.isBlocked });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ✅ Delete user (Admin only)
+router.delete("/users/:id", auth, roleMiddleware("admin"), async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: "User deleted ✅" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 module.exports = router;
