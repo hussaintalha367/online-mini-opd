@@ -30,7 +30,10 @@ router.post("/register", async (req, res) => {
     name: Joi.string().min(3).required(),
     email: Joi.string().email().required(),
     password: Joi.string().min(6).required(),
-    role: Joi.string().valid("patient", "doctor").required()
+    role: Joi.string().valid("patient", "doctor").required(),
+    specialization: Joi.string().allow("").optional(),
+    experience: Joi.number().min(0).optional(),
+    phone: Joi.string().allow("").optional(),
   });
 
   const { error } = schema.validate(req.body);
@@ -39,7 +42,7 @@ router.post("/register", async (req, res) => {
     return res.status(400).json({ message: error.details[0].message });
   }
 
-  const { name, email, password, role } = req.body;
+  const { name, email, password, role, specialization, experience, phone } = req.body;
 
   // ✅ Prevent public admin registration
   if (role === "admin") {
@@ -54,7 +57,15 @@ router.post("/register", async (req, res) => {
 
   const hashed = await bcrypt.hash(password, 10);
 
-  const user = new User({ name, email, password: hashed, role });
+  const user = new User({
+    name,
+    email,
+    password: hashed,
+    role,
+    specialization: specialization || "",
+    experience: experience || 0,
+    phone: phone || "",
+  });
   await user.save();
 
   res.json({ message: "User registered ✅" });

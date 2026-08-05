@@ -10,17 +10,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { decode as atob } from "base-64";
 import { io } from "socket.io-client";
-import { getMessages } from "../services/api";
+import { getMessages, SOCKET_URL } from "../services/api";
 import { ThemeContext } from "../context/ThemeContext";
 
-const socket = io("https://online-mini-opd-production.up.railway.app");
+// Socket is created INSIDE the component (via useRef) so it reconnects properly each time
 
 function formatTime(dateStr) {
   if (!dateStr) return "";
@@ -70,12 +69,20 @@ export default function ChatScreen({ route, navigation }) {
 
   const scrollRef = useRef();
   const typingTimer = useRef(null);
+  const socketRef = useRef(null);
 
   useEffect(() => {
-    initializeChat();
+    // Create socket connection when screen mounts
+    socketRef.current = io(SOCKET_URL, {
+      transports: ["websocket"],
+      reconnectionAttempts: 5,
+    });
+
+    const socket = socketRef.current;
 
     socket.on("connect", () => setConnected(true));
     socket.on("disconnect", () => setConnected(false));
+    socket.on("connect_error", () => setConnected(false));
 
     socket.on("receiveMessage", (message) => {
       setMessages((prev) => [...prev, message]);
@@ -87,12 +94,18 @@ export default function ChatScreen({ route, navigation }) {
       setTypingUser(null);
     });
 
+    initializeChat();
+
     return () => {
+      // Cleanup on unmount
+      if (typingTimer.current) clearTimeout(typingTimer.current);
       socket.off("receiveMessage");
       socket.off("userTyping");
       socket.off("stopTyping");
       socket.off("connect");
       socket.off("disconnect");
+      socket.off("connect_error");
+      socket.disconnect();
     };
   }, []);
 
@@ -104,33 +117,34 @@ export default function ChatScreen({ route, navigation }) {
       const payload = JSON.parse(atob(token.split(".")[1]));
       setUserId(payload.id);
 
-      socket.emit("joinRoom", { appointmentId, userId: payload.id });
+      socketRef.current.emit("joinRoom", { appointmentId, userId: payload.id });
 
       const res = await getMessages(token, appointmentId);
       setMessages(res.data || []);
     } catch (e) {
-      console.log(e);
+      console.log("Chat init error:", e);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSend = () => {
-    if (!text.trim()) return;
-    socket.emit("sendMessage", {
+    if (!text.trim() || !socketRef.current) return;
+    socketRef.current.emit("sendMessage", {
       appointmentId,
       message: { sender: userId, text: text.trim() },
     });
     setText("");
-    socket.emit("stopTyping", { appointmentId });
+    socketRef.current.emit("stopTyping", { appointmentId });
   };
 
   const handleTyping = (val) => {
     setText(val);
-    socket.emit("typing", { appointmentId, user: userId });
+    if (!socketRef.current) return;
+    socketRef.current.emit("typing", { appointmentId, user: userId });
     if (typingTimer.current) clearTimeout(typingTimer.current);
     typingTimer.current = setTimeout(() => {
-      socket.emit("stopTyping", { appointmentId });
+      socketRef.current?.emit("stopTyping", { appointmentId });
     }, 1200);
   };
 
