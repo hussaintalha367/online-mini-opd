@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "https://online-mini-opd-production.up.railway.app/api";
+const BASE_URL = "http://10.106.196.59:5000/api";
 
 export const loginAdmin = (email, password) =>
   axios.post(`${BASE_URL}/auth/login`, { email, password });
