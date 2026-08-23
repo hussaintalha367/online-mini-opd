@@ -333,7 +333,13 @@ export default function AppointmentsScreen({ navigation }) {
                   {/* Open Chat */}
                   <TouchableOpacity
                     style={[styles.actionBtn, styles.chatBtn]}
-                    onPress={() => navigation.navigate("Chat", { appointmentId: item._id })}
+                    onPress={() => navigation.navigate("Chat", {
+                      appointmentId: item._id,
+                      otherName: isDoctor
+                        ? (item.patient?.name || "Patient")
+                        : ("Dr. " + (item.doctor?.name || "Doctor")),
+                      otherRole: isDoctor ? "patient" : "doctor",
+                    })}
                     activeOpacity={0.8}
                   >
                     <Ionicons name="chatbubble-ellipses-outline" size={16} color="#fff" />

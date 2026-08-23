@@ -65,15 +65,16 @@ function groupByDate(messages) {
 }
 
 export default function ChatScreen({ route, navigation }) {
-  const { appointmentId } = route.params;
+  const { appointmentId, otherName, otherRole } = route.params;
   const { theme } = useContext(ThemeContext);
 
-  const [messages, setMessages] = useState([]);
-  const [text, setText] = useState("");
-  const [userId, setUserId] = useState("");
+  const [messages, setMessages]     = useState([]);
+  const [text, setText]             = useState("");
+  const [userId, setUserId]         = useState("");
+  const [userRole, setUserRole]     = useState("");
   const [typingUser, setTypingUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [connected, setConnected] = useState(false);
+  const [loading, setLoading]       = useState(true);
+  const [connected, setConnected]   = useState(false);
 
   const scrollRef = useRef();
   const typingTimer = useRef(null);
@@ -124,6 +125,7 @@ export default function ChatScreen({ route, navigation }) {
 
       const payload = JSON.parse(atob(token.split(".")[1]));
       setUserId(payload.id);
+      setUserRole(payload.role);
 
       socketRef.current.emit("joinRoom", { appointmentId, userId: payload.id });
 
@@ -169,13 +171,21 @@ export default function ChatScreen({ route, navigation }) {
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <View style={styles.headerAvatar}>
-            <Ionicons name="medical" size={20} color="#fff" />
+            <Ionicons
+              name={otherRole === "doctor" ? "medkit" : "person"}
+              size={20}
+              color="#fff"
+            />
           </View>
           <View>
-            <Text style={styles.headerTitle}>Appointment Chat</Text>
+            <Text style={styles.headerTitle}>
+              {otherName || "Appointment Chat"}
+            </Text>
             <View style={styles.headerStatus}>
               <View style={[styles.onlineDot, { backgroundColor: connected ? "#69F0AE" : "#aaa" }]} />
-              <Text style={styles.headerStatusText}>{connected ? "Online" : "Connecting..."}</Text>
+              <Text style={styles.headerStatusText}>
+                {connected ? "Online" : "Connecting..."}
+              </Text>
             </View>
           </View>
         </View>
@@ -219,10 +229,12 @@ export default function ChatScreen({ route, navigation }) {
               }
 
               const msg = item.data;
-              const isMine = msg.sender?._id === userId || msg.sender === userId;
+              // sender can be a populated object OR a plain string ID (real-time socket msg)
+              const senderId   = msg.sender?._id || msg.sender;
+              const isMine     = senderId === userId;
               const senderName = isMine
                 ? "You"
-                : msg.sender?.name || (msg.sender?.role === "doctor" ? "Doctor" : "Patient");
+                : (msg.sender?.name || otherName || (otherRole === "doctor" ? "Doctor" : "Patient"));
 
               return (
                 <View
