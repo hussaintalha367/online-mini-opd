@@ -11,8 +11,6 @@ import {
   StatusBar,
   ActivityIndicator,
   Switch,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
@@ -179,12 +177,8 @@ export default function ProfileScreen({ setRole }) {
   );
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <StatusBar barStyle="light-content" backgroundColor={roleColor} />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle="light-content" backgroundColor={roleColor} />
 
         {/* ── Hero Header ── */}
         <LinearGradient
@@ -377,7 +371,6 @@ export default function ProfileScreen({ setRole }) {
           <View style={{ height: 32 }} />
         </ScrollView>
       </View>
-    </KeyboardAvoidingView>
   );
 }
 
