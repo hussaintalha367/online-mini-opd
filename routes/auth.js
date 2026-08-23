@@ -113,11 +113,14 @@ router.post("/login", async (req, res) => {
   res.json({
     token,
     user: {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      profileImage: user.profileImage
+      id:             user._id,
+      name:           user.name,
+      email:          user.email,
+      role:           user.role,
+      phone:          user.phone          || "",
+      specialization: user.specialization || "",
+      experience:     user.experience     || 0,
+      profileImage:   user.profileImage   || "",
     }
   });
 });
@@ -126,16 +129,32 @@ router.post("/login", async (req, res) => {
 
 router.put("/update-profile", auth, async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { name, email, phone, specialization, experience } = req.body;
 
     const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (name) user.name = name;
-    if (email) user.email = email;
+    if (name)           user.name           = name;
+    if (email)          user.email          = email;
+    if (phone !== undefined)          user.phone          = phone;
+    if (specialization !== undefined) user.specialization = specialization;
+    if (experience !== undefined)     user.experience     = experience;
 
     await user.save();
 
-    res.json({ message: "Profile updated ✅", user });
+    res.json({
+      message: "Profile updated",
+      user: {
+        id:             user._id,
+        name:           user.name,
+        email:          user.email,
+        phone:          user.phone,
+        specialization: user.specialization,
+        experience:     user.experience,
+        role:           user.role,
+        profileImage:   user.profileImage,
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: "Update failed" });
   }
