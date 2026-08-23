@@ -19,6 +19,36 @@ import { Ionicons } from "@expo/vector-icons";
 import { updateProfile, uploadProfileImage } from "../services/api";
 import { ThemeContext } from "../context/ThemeContext";
 
+/* ── InputField defined OUTSIDE component so it never remounts on state change ── */
+function InputField({ label, icon, value, onChange, keyboardType, placeholder, editable = true, darkMode, theme }) {
+  return (
+    <>
+      <Text style={[styles.label, { color: darkMode ? "#aaa" : "#666" }]}>{label}</Text>
+      <View style={[
+        styles.inputRow,
+        {
+          borderColor: darkMode ? "#333" : "#E8ECF4",
+          backgroundColor: darkMode ? "#2A2A2A" : "#F7F8FA",
+          opacity: editable ? 1 : 0.6,
+        }
+      ]}>
+        <Ionicons name={icon} size={18} color="#888" />
+        <TextInput
+          value={value}
+          onChangeText={onChange}
+          placeholder={placeholder}
+          placeholderTextColor="#aaa"
+          keyboardType={keyboardType || "default"}
+          autoCapitalize="none"
+          editable={editable}
+          style={[styles.inputField, { color: theme.text }]}
+        />
+        {!editable && <Ionicons name="lock-closed-outline" size={14} color="#ccc" />}
+      </View>
+    </>
+  );
+}
+
 export default function ProfileScreen({ setRole }) {
   const { theme, darkMode, toggleTheme } = useContext(ThemeContext);
 
@@ -148,34 +178,6 @@ export default function ProfileScreen({ setRole }) {
   const roleBg    = role === "doctor" ? "#E0F2F1" : role === "admin" ? "#EDE7F6" : "#E3F2FD";
   const roleLabel = role === "doctor" ? "Doctor" : role === "admin" ? "Admin" : "Patient";
 
-  /* Reusable input field */
-  const InputField = ({ label, icon, value, onChange, keyboardType, placeholder, editable = true }) => (
-    <>
-      <Text style={[styles.label, { color: darkMode ? "#aaa" : "#666" }]}>{label}</Text>
-      <View style={[
-        styles.inputRow,
-        {
-          borderColor: darkMode ? "#333" : "#E8ECF4",
-          backgroundColor: darkMode ? "#2A2A2A" : "#F7F8FA",
-          opacity: editable ? 1 : 0.6,
-        }
-      ]}>
-        <Ionicons name={icon} size={18} color="#888" />
-        <TextInput
-          value={value}
-          onChangeText={onChange}
-          placeholder={placeholder}
-          placeholderTextColor="#aaa"
-          keyboardType={keyboardType || "default"}
-          autoCapitalize="none"
-          editable={editable}
-          style={[styles.inputField, { color: theme.text }]}
-        />
-        {!editable && <Ionicons name="lock-closed-outline" size={14} color="#ccc" />}
-      </View>
-    </>
-  );
-
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar barStyle="light-content" backgroundColor={roleColor} />
@@ -242,6 +244,8 @@ export default function ProfileScreen({ setRole }) {
               value={name}
               onChange={setName}
               placeholder="Enter your name"
+              darkMode={darkMode}
+              theme={theme}
             />
             <InputField
               label="Email Address"
@@ -250,6 +254,8 @@ export default function ProfileScreen({ setRole }) {
               onChange={setEmail}
               placeholder="Enter your email"
               keyboardType="email-address"
+              darkMode={darkMode}
+              theme={theme}
             />
             <InputField
               label="Phone Number"
@@ -258,6 +264,8 @@ export default function ProfileScreen({ setRole }) {
               onChange={setPhone}
               placeholder="e.g. 03001234567"
               keyboardType="phone-pad"
+              darkMode={darkMode}
+              theme={theme}
             />
 
             {/* Doctor-only fields */}
@@ -276,6 +284,8 @@ export default function ProfileScreen({ setRole }) {
                   value={specialization}
                   onChange={setSpecialization}
                   placeholder="e.g. Cardiologist, General Physician"
+                  darkMode={darkMode}
+                  theme={theme}
                 />
                 <InputField
                   label="Years of Experience"
@@ -284,6 +294,8 @@ export default function ProfileScreen({ setRole }) {
                   onChange={setExperience}
                   placeholder="e.g. 5"
                   keyboardType="numeric"
+                  darkMode={darkMode}
+                  theme={theme}
                 />
               </View>
             )}
