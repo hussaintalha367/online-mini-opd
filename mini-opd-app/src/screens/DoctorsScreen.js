@@ -304,10 +304,11 @@ export default function DoctorsScreen({ navigation }) {
                 mode="date"
                 minimumDate={new Date()}
                 display="default"
-                onChange={(_, selected) => {
+                onValueChange={(selected) => {
                   setShowDatePicker(false);
                   if (selected) setDate(new Date(selected.setHours(date.getHours(), date.getMinutes())));
                 }}
+                onDismiss={() => setShowDatePicker(false)}
               />
             )}
 
@@ -328,10 +329,11 @@ export default function DoctorsScreen({ navigation }) {
                 value={date}
                 mode="time"
                 display="default"
-                onChange={(_, selected) => {
+                onValueChange={(selected) => {
                   setShowTimePicker(false);
                   if (selected) setDate(selected);
                 }}
+                onDismiss={() => setShowTimePicker(false)}
               />
             )}
 

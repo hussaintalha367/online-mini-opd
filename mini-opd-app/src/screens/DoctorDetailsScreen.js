@@ -210,10 +210,11 @@ export default function DoctorDetailsScreen({ route, navigation }) {
                 mode="date"
                 minimumDate={new Date()}
                 display="default"
-                onChange={(_, sel) => {
+                onValueChange={(sel) => {
                   setShowDatePicker(false);
                   if (sel) setDate(new Date(sel.setHours(date.getHours(), date.getMinutes())));
                 }}
+                onDismiss={() => setShowDatePicker(false)}
               />
             )}
 
@@ -229,10 +230,11 @@ export default function DoctorDetailsScreen({ route, navigation }) {
                 value={date}
                 mode="time"
                 display="default"
-                onChange={(_, sel) => {
+                onValueChange={(sel) => {
                   setShowTimePicker(false);
                   if (sel) setDate(sel);
                 }}
+                onDismiss={() => setShowTimePicker(false)}
               />
             )}
 
