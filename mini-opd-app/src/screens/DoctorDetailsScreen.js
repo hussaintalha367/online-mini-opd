@@ -43,7 +43,7 @@ export default function DoctorDetailsScreen({ route, navigation }) {
         time: date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       });
       setModalVisible(false);
-      Alert.alert("Booked ✅", `Appointment requested with Dr. ${doctor.name}`);
+      Alert.alert("Appointment Booked", `Request sent to Dr. ${doctor.name}.`);
     } catch (e) {
       Alert.alert("Error", e?.response?.data?.message || "Booking failed.");
     } finally {

@@ -68,9 +68,9 @@ export default function ProfileScreen({ setRole }) {
         await AsyncStorage.setItem("user", JSON.stringify(stored));
       }
 
-      Alert.alert("Success ✅", "Profile updated successfully.");
+      Alert.alert("Saved", "Profile updated successfully.");
     } catch (_) {
-      Alert.alert("Error ❌", "Failed to update profile. Please try again.");
+      Alert.alert("Error", "Failed to update profile. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -115,10 +115,10 @@ export default function ProfileScreen({ setRole }) {
         await AsyncStorage.setItem("user", JSON.stringify(stored));
       }
 
-      Alert.alert("Success ✅", "Profile photo updated.");
+      Alert.alert("Photo Updated", "Profile photo changed successfully.");
     } catch (err) {
       console.log(err?.response || err);
-      Alert.alert("Upload Failed ❌", "Could not upload image. Try again.");
+      Alert.alert("Upload Failed", "Could not upload image. Try again.");
     } finally {
       setUploading(false);
     }

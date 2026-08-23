@@ -67,7 +67,7 @@ export default function LoginScreen({ navigation, setRole }) {
 
         {/* Card */}
         <View style={styles.card}>
-          <Text style={styles.title}>Welcome Back 👋</Text>
+          <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
 
           {/* Email */}

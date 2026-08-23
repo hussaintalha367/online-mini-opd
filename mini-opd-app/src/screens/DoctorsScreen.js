@@ -103,7 +103,7 @@ export default function DoctorsScreen({ navigation }) {
         time: date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       });
       setModalVisible(false);
-      Alert.alert("Booked ✅", `Appointment requested with Dr. ${selectedDoctor.name}`);
+      Alert.alert("Appointment Booked", `Request sent to Dr. ${selectedDoctor.name}.`);
     } catch (e) {
       Alert.alert("Error", e?.response?.data?.message || "Booking failed.");
     } finally {

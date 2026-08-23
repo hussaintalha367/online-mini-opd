@@ -91,7 +91,7 @@ export default function DoctorDashboard({ navigation }) {
           <View style={{ flex: 1 }}>
             <Text style={styles.greetText}>{greeting()},</Text>
             <Text style={styles.nameText} numberOfLines={1}>
-              Dr. {user.name} 👨‍⚕️
+              Dr. {user.name}
             </Text>
             <Text style={styles.bannerSub}>
               {user.specialization || "Medical Professional"}

@@ -81,7 +81,7 @@ export default function AppointmentsScreen({ navigation }) {
     try {
       const token = await AsyncStorage.getItem("token");
       await updateAppointmentStatus(token, id, status);
-      Alert.alert("Updated ✅", `Appointment ${status}`);
+      Alert.alert("Status Updated", `Appointment marked as ${status}.`);
       loadAppointments(true);
     } catch (e) {
       Alert.alert("Error", "Could not update status.");
@@ -121,7 +121,7 @@ export default function AppointmentsScreen({ navigation }) {
     });
     try {
       await uploadPrescription(token, appointmentId, formData);
-      Alert.alert("Uploaded ✅", "Prescription uploaded successfully.");
+      Alert.alert("Uploaded", "Prescription uploaded successfully.");
       loadAppointments(true);
     } catch (e) {
       Alert.alert("Error", "Upload failed. Try again.");

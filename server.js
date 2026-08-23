@@ -76,15 +76,18 @@ const Message = require("./models/Message");
 
 socket.on("sendMessage", async ({ appointmentId, message }) => {
   try {
-    // ✅ Save to database
+    // Save to database then populate sender name
     const newMessage = await Message.create({
       appointment: appointmentId,
       sender: message.sender,
       text: message.text,
     });
 
-    // ✅ Emit saved message
-    io.to(appointmentId).emit("receiveMessage", newMessage);
+    // Populate sender so frontend gets name + role
+    const populated = await newMessage.populate("sender", "name role profileImage");
+
+    // Emit populated message to all in room
+    io.to(appointmentId).emit("receiveMessage", populated);
 
   } catch (error) {
     console.error("Message save error:", error);

@@ -87,7 +87,7 @@ export default function AdminDashboard({ setRole }) {
         <View style={styles.bannerRow}>
           <View>
             <Text style={styles.greetText}>Admin Panel</Text>
-            <Text style={styles.nameText}>Mini OPD 🛠️</Text>
+            <Text style={styles.nameText}>Mini OPD System</Text>
             <Text style={styles.bannerSub}>System Overview</Text>
           </View>
           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>

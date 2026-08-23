@@ -102,7 +102,7 @@ export default function PatientDashboard({ navigation }) {
           <View style={{ flex: 1 }}>
             <Text style={styles.greetText}>{greeting()},</Text>
             <Text style={styles.nameText} numberOfLines={1}>
-              {user.name} 👋
+              {user.name}
             </Text>
             <Text style={styles.bannerSub}>How are you feeling today?</Text>
           </View>

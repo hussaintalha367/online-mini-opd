@@ -28,6 +28,14 @@ function formatTime(dateStr) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function formatFullDateTime(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d)) return "";
+  return d.toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" }) +
+    "  " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 function formatDateDivider(dateStr) {
   if (!dateStr) return "";
   const d = new Date(dateStr);
@@ -211,7 +219,10 @@ export default function ChatScreen({ route, navigation }) {
               }
 
               const msg = item.data;
-              const isMine = msg.sender === userId || msg.sender?._id === userId;
+              const isMine = msg.sender?._id === userId || msg.sender === userId;
+              const senderName = isMine
+                ? "You"
+                : msg.sender?.name || (msg.sender?.role === "doctor" ? "Doctor" : "Patient");
 
               return (
                 <View
@@ -228,22 +239,32 @@ export default function ChatScreen({ route, navigation }) {
                     </View>
                   )}
 
-                  <View
-                    style={[
-                      styles.bubble,
-                      isMine ? styles.myBubble : styles.theirBubble,
-                    ]}
-                  >
-                    <Text style={[styles.msgText, isMine ? styles.myText : styles.theirText]}>
-                      {msg.text}
-                    </Text>
-                    <View style={styles.msgMeta}>
-                      <Text style={[styles.msgTime, { color: isMine ? "rgba(255,255,255,0.65)" : "#aaa" }]}>
-                        {formatTime(msg.createdAt)}
+                  <View style={[styles.bubbleCol, isMine && { alignItems: "flex-end" }]}>
+                    {/* Sender name + date above bubble */}
+                    <View style={[styles.msgHeader, isMine && { flexDirection: "row-reverse" }]}>
+                      <Text style={styles.msgSenderName}>{senderName}</Text>
+                      <Text style={styles.msgHeaderDate}>
+                        {formatFullDateTime(msg.createdAt)}
                       </Text>
-                      {isMine && (
-                        <Ionicons name="checkmark-done" size={12} color="rgba(255,255,255,0.65)" />
-                      )}
+                    </View>
+
+                    <View
+                      style={[
+                        styles.bubble,
+                        isMine ? styles.myBubble : styles.theirBubble,
+                      ]}
+                    >
+                      <Text style={[styles.msgText, isMine ? styles.myText : styles.theirText]}>
+                        {msg.text}
+                      </Text>
+                      <View style={styles.msgMeta}>
+                        <Text style={[styles.msgTime, { color: isMine ? "rgba(255,255,255,0.65)" : "#aaa" }]}>
+                          {formatTime(msg.createdAt)}
+                        </Text>
+                        {isMine && (
+                          <Ionicons name="checkmark-done" size={12} color="rgba(255,255,255,0.65)" />
+                        )}
+                      </View>
                     </View>
                   </View>
                 </View>
@@ -357,8 +378,27 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center",
     marginBottom: 4,
   },
+  bubbleCol: {
+    maxWidth: "75%",
+    alignItems: "flex-start",
+  },
+  msgHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+    paddingHorizontal: 4,
+  },
+  msgSenderName: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#555",
+  },
+  msgHeaderDate: {
+    fontSize: 10,
+    color: "#aaa",
+  },
   bubble: {
-    maxWidth: "72%",
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 20,

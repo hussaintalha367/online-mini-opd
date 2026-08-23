@@ -131,7 +131,9 @@ router.post("/chat/:id", auth, async (req, res) => {
 });
 
 router.get("/chat/:id", auth, async (req, res) => {
-  const messages = await Message.find({ appointment: req.params.id });
+  const messages = await Message.find({ appointment: req.params.id })
+    .populate("sender", "name role profileImage")
+    .sort({ createdAt: 1 });
   res.json(messages);
 });
 

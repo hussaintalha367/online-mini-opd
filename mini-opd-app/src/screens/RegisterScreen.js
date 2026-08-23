@@ -45,7 +45,7 @@ export default function RegisterScreen({ navigation }) {
         specialization: role === "doctor" ? specialization.trim() : "",
         experience: role === "doctor" ? Number(experience) : 0,
       });
-      Alert.alert("Success ✅", "Account created! Please sign in.", [
+      Alert.alert("Account Created", "Registration successful. Please sign in.", [
         { text: "OK", onPress: () => navigation.replace("Login") },
       ]);
     } catch (error) {
