@@ -107,7 +107,6 @@ function DoctorTabs({ setRole }) {
           <Tab.Navigator screenOptions={({ route }) => TAB_OPTIONS(route)}>
             <Tab.Screen
               name="Home"
-              component={DoctorDashboard}
               options={{
                 tabBarIcon: ({ color, size }) => (
                   <Ionicons name="home-outline" size={size} color={color} />

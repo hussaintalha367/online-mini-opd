@@ -1,9 +1,9 @@
 import axios from "axios";
 
-const BASE_URL = "http://10.106.196.59:5000/api";
+const BASE_URL = "http://192.168.1.18:5000/api";
 
 // Socket URL — same server, without /api
-export const SOCKET_URL = "http://10.106.196.59:5000";
+export const SOCKET_URL = "http://192.168.1.18:5000";
 
 export const loginUser = (email, password) =>
   axios.post(`${BASE_URL}/auth/login`, { email, password });
