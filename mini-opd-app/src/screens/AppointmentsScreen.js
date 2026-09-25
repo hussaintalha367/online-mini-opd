@@ -16,6 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { Linking } from "react-native";
 import { ThemeContext } from "../context/ThemeContext";
+import { NotificationContext } from "../context/NotificationContext";
 import {
   getMyAppointments,
   cancelAppointment,
@@ -35,6 +36,7 @@ const STATUS_CONFIG = {
 
 export default function AppointmentsScreen({ navigation }) {
   const { theme } = useContext(ThemeContext);
+  const { refreshBadges } = useContext(NotificationContext);
 
   const [appointments, setAppointments] = useState([]);
   const [userRole, setUserRole] = useState("");
@@ -83,6 +85,7 @@ export default function AppointmentsScreen({ navigation }) {
       await updateAppointmentStatus(token, id, status);
       Alert.alert("Status Updated", `Appointment marked as ${status}.`);
       loadAppointments(true);
+      refreshBadges();
     } catch (e) {
       Alert.alert("Error", "Could not update status.");
     }
@@ -98,6 +101,7 @@ export default function AppointmentsScreen({ navigation }) {
           const token = await AsyncStorage.getItem("token");
           await cancelAppointment(token, id);
           loadAppointments(true);
+          refreshBadges();
         },
       },
     ]);

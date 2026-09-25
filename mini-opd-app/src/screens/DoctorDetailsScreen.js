@@ -16,6 +16,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ThemeContext } from "../context/ThemeContext";
+import { NotificationContext } from "../context/NotificationContext";
 import { bookAppointment } from "../services/api";
 
 const AVATAR_COLORS = ["#1565C0", "#00695C", "#6A1B9A", "#E65100", "#B71C1C", "#37474F"];
@@ -26,6 +27,7 @@ function getAvatarColor(name = "") {
 export default function DoctorDetailsScreen({ route, navigation }) {
   const { doctor } = route.params;
   const { theme } = useContext(ThemeContext);
+  const { refreshBadges } = useContext(NotificationContext);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [date, setDate] = useState(new Date());
@@ -44,6 +46,7 @@ export default function DoctorDetailsScreen({ route, navigation }) {
       });
       setModalVisible(false);
       Alert.alert("Appointment Booked", `Request sent to Dr. ${doctor.name}.`);
+      refreshBadges();
     } catch (e) {
       Alert.alert("Error", e?.response?.data?.message || "Booking failed.");
     } finally {

@@ -1,9 +1,9 @@
 import axios from "axios";
 
-const BASE_URL = "http://192.168.1.18:5000/api";
+const BASE_URL = "http://10.108.117.59:5000/api";
 
 // Socket URL — same server, without /api
-export const SOCKET_URL = "http://192.168.1.18:5000";
+export const SOCKET_URL = "http://10.108.117.59:5000";
 
 export const loginUser = (email, password) =>
   axios.post(`${BASE_URL}/auth/login`, { email, password });
@@ -32,8 +32,7 @@ export const cancelAppointment = (token, id) =>
 export const uploadPrescription = (token, id, formData) =>
   axios.post(`${BASE_URL}/appointments/upload/${id}`, formData, {
     headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "multipart/form-data"
+      Authorization: `Bearer ${token}`
     }
   });
 
@@ -47,7 +46,7 @@ export const getMessages = (token, id) =>
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  export const updateAppointmentStatus = (token, id, status) =>
+export const updateAppointmentStatus = (token, id, status) =>
   axios.put(
     `${BASE_URL}/appointments/update-status/${id}`,
     { status },
@@ -55,7 +54,7 @@ export const getMessages = (token, id) =>
       headers: { Authorization: `Bearer ${token}` }
     }
   );
-  export const updateProfile = (token, data) =>
+export const updateProfile = (token, data) =>
   axios.put(`${BASE_URL}/auth/update-profile`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
@@ -94,4 +93,18 @@ export const deleteUser = (token, id) =>
 export const unblockUser = (token, id) =>
   axios.put(`${BASE_URL}/admin/unblock/${id}`, {}, {
     headers: { Authorization: `Bearer ${token}` }
+  });
+
+/* ── Push Token ── */
+export const registerPushToken = (token, pushToken) =>
+  axios.post(`${BASE_URL}/auth/push-token`, { pushToken }, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+/* ── Chat Attachment Upload ── */
+export const uploadChatAttachment = (token, id, formData) =>
+  axios.post(`${BASE_URL}/appointments/chat/upload/${id}`, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });

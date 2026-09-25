@@ -18,7 +18,7 @@ const rateLimit = require("express-rate-limit");
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP
+  max: 5000, // generous limit for development & mobile app usage
 });
 
 app.use(limiter);
@@ -73,6 +73,9 @@ io.on("connection", (socket) => {
 
   // Send message
 const Message = require("./models/Message");
+const User = require("./models/User");
+const Appointment = require("./models/Appointment");
+const { sendPushNotification } = require("./utils/pushNotifications");
 
 socket.on("sendMessage", async ({ appointmentId, message }) => {
   try {
@@ -80,7 +83,10 @@ socket.on("sendMessage", async ({ appointmentId, message }) => {
     const newMessage = await Message.create({
       appointment: appointmentId,
       sender: message.sender,
-      text: message.text,
+      text: message.text || "",
+      image: message.image || "",
+      fileUrl: message.fileUrl || "",
+      fileName: message.fileName || "",
     });
 
     // Populate sender so frontend gets name + role
@@ -88,6 +94,53 @@ socket.on("sendMessage", async ({ appointmentId, message }) => {
 
     // Emit populated message to all in room
     io.to(appointmentId).emit("receiveMessage", populated);
+
+    // Send push notification to the other party
+    try {
+      const appointment = await Appointment.findById(appointmentId);
+      if (appointment) {
+        const senderId = message.sender;
+        const recipientId =
+          appointment.patient.toString() === senderId
+            ? appointment.doctor.toString()
+            : appointment.patient.toString();
+
+        const recipient = await User.findById(recipientId);
+        const sender = await User.findById(senderId);
+
+        if (recipient?.pushToken) {
+          // Only send push if recipient is NOT currently in the room
+          const recipientSocketId = onlineUsers.get(recipientId);
+          const roomSockets = io.sockets.adapter.rooms.get(appointmentId);
+          const isInRoom = recipientSocketId && roomSockets?.has(recipientSocketId);
+
+          if (!isInRoom) {
+            let notificationBody = message.text || "";
+            if (!notificationBody) {
+              if (message.image) notificationBody = "📷 Sent an image";
+              else if (message.fileName) notificationBody = `📎 Sent a file: ${message.fileName}`;
+              else notificationBody = "📎 Sent an attachment";
+            } else if (notificationBody.length > 100) {
+              notificationBody = notificationBody.substring(0, 100) + "...";
+            }
+
+            await sendPushNotification(
+              recipient.pushToken,
+              `${sender?.name || "New Message"} 💬`,
+              notificationBody,
+              {
+                screen: "Chat",
+                appointmentId,
+                otherName: sender?.name || "",
+                otherRole: sender?.role || "",
+              }
+            );
+          }
+        }
+      }
+    } catch (pushErr) {
+      console.log("Chat push notification error (non-critical):", pushErr.message);
+    }
 
   } catch (error) {
     console.error("Message save error:", error);

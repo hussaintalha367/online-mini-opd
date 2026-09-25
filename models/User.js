@@ -11,5 +11,6 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 userSchema.add({ isBlocked: { type: Boolean, default: false } });
 userSchema.add({ profileImage: { type: String, default: "" } });
+userSchema.add({ pushToken: { type: String, default: "" } });
 
 module.exports = mongoose.model("User", userSchema);

@@ -179,4 +179,21 @@ router.post("/upload-profile", auth, upload.single("file"), async (req, res) => 
   }
 });
 
+/* ---------------- REGISTER PUSH TOKEN ---------------- */
+
+router.post("/push-token", auth, async (req, res) => {
+  try {
+    const { pushToken } = req.body;
+    if (!pushToken) {
+      return res.status(400).json({ message: "Push token is required" });
+    }
+
+    await User.findByIdAndUpdate(req.user.id, { pushToken });
+    res.json({ message: "Push token saved ✅" });
+  } catch (error) {
+    console.error("Push token save error:", error);
+    res.status(500).json({ message: "Failed to save push token" });
+  }
+});
+
 module.exports = router;

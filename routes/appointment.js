@@ -1,7 +1,9 @@
 const express = require("express");
 const Appointment = require("../models/Appointment");
 const Message = require("../models/Message");
+const User = require("../models/User");
 const auth = require("../middleware/authMiddleware");
+const { sendPushNotification } = require("../utils/pushNotifications");
 const router = express.Router();
 
 const multer = require("multer");
@@ -17,6 +19,15 @@ const storage = new CloudinaryStorage({
 });
 const upload = multer({ storage });
 
+const chatStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "mini-opd/chat",
+    resource_type: "auto",
+  },
+});
+const uploadChat = multer({ storage: chatStorage, limits: { fileSize: 20 * 1024 * 1024 } });
+
 router.post("/book", auth, async (req, res) => {
   try {
     const { doctorId, date, time } = req.body;
@@ -30,6 +41,22 @@ router.post("/book", auth, async (req, res) => {
     });
 
     await appointment.save();
+
+    // Send push notification to the doctor
+    try {
+      const doctor = await User.findById(doctorId);
+      const patient = await User.findById(req.user.id);
+      if (doctor?.pushToken) {
+        await sendPushNotification(
+          doctor.pushToken,
+          "New Appointment Request 📋",
+          `${patient?.name || "A patient"} has requested an appointment on ${date} at ${time}.`,
+          { screen: "Appointments", appointmentId: appointment._id.toString() }
+        );
+      }
+    } catch (notifErr) {
+      console.log("Push notification error (non-critical):", notifErr.message);
+    }
 
     res.json({ message: "Appointment booked ✅" });
   } catch (error) {
@@ -58,6 +85,27 @@ router.put("/update-status/:id", auth, async (req, res) => {
     appointment.status = status;
     if (reason) appointment.reason = reason;
     await appointment.save();
+
+    // Send push notification to the patient about status change
+    try {
+      const patient = await User.findById(appointment.patient);
+      const doctor = await User.findById(req.user.id);
+      const statusMessages = {
+        approved: `Dr. ${doctor?.name || "Your doctor"} has approved your appointment! ✅`,
+        rejected: `Dr. ${doctor?.name || "Your doctor"} has declined your appointment request.`,
+        completed: `Your appointment with Dr. ${doctor?.name || "your doctor"} has been marked as completed.`,
+      };
+      if (patient?.pushToken && statusMessages[status]) {
+        await sendPushNotification(
+          patient.pushToken,
+          `Appointment ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+          statusMessages[status],
+          { screen: "Appointments", appointmentId: appointment._id.toString() }
+        );
+      }
+    } catch (notifErr) {
+      console.log("Push notification error (non-critical):", notifErr.message);
+    }
 
     res.json({ message: "Status updated ✅", appointment });
   } catch (err) {
@@ -119,15 +167,42 @@ router.get("/stats", auth, async (req, res) => {
   }
 });
 
-router.post("/chat/:id", auth, async (req, res) => {
-  const message = new Message({
-    appointment: req.params.id,
-    sender: req.user.id,
-    text: req.body.text
-  });
+router.post("/chat/upload/:id", auth, uploadChat.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file provided" });
+    }
+    const isImage = req.file.mimetype ? req.file.mimetype.startsWith("image/") : false;
+    res.json({
+      url: req.file.path,
+      fileName: req.file.originalname || (isImage ? "image.jpg" : "document"),
+      fileType: req.file.mimetype || "",
+      isImage,
+    });
+  } catch (error) {
+    console.error("Chat file upload error:", error);
+    res.status(500).json({ message: "Failed to upload file to chat" });
+  }
+});
 
-  await message.save();
-  res.json(message);
+router.post("/chat/:id", auth, async (req, res) => {
+  try {
+    const message = new Message({
+      appointment: req.params.id,
+      sender: req.user.id,
+      text: req.body.text || "",
+      image: req.body.image || "",
+      fileUrl: req.body.fileUrl || "",
+      fileName: req.body.fileName || "",
+    });
+
+    await message.save();
+    const populated = await message.populate("sender", "name role profileImage");
+    res.json(populated);
+  } catch (err) {
+    console.error("Chat message save error:", err);
+    res.status(500).json({ message: "Failed to save message" });
+  }
 });
 
 router.get("/chat/:id", auth, async (req, res) => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext, useRef } from "react";
 import { View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NavigationContainer } from "@react-navigation/native";
@@ -20,6 +20,12 @@ import DoctorDetailsScreen from "./src/screens/DoctorDetailsScreen";
 import Loader from "./src/components/Loader";
 
 import { ThemeProvider } from "./src/context/ThemeContext";
+import { NotificationProvider, NotificationContext } from "./src/context/NotificationContext";
+import {
+  registerForPushNotifications,
+  setupNotificationResponseListener,
+  setupForegroundNotificationListener,
+} from "./src/utils/pushNotifications";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -46,6 +52,7 @@ const TAB_OPTIONS = (route) => ({
 
 /* ── PATIENT TABS ── */
 function PatientTabs({ setRole }) {
+  const { appointmentBadge, refreshBadges } = useContext(NotificationContext);
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="PatientMain">
@@ -76,6 +83,8 @@ function PatientTabs({ setRole }) {
                 tabBarIcon: ({ color, size }) => (
                   <Ionicons name="calendar-outline" size={size} color={color} />
                 ),
+                tabBarBadge: appointmentBadge > 0 ? appointmentBadge : undefined,
+                tabBarBadgeStyle: { backgroundColor: "#E53935", fontSize: 10, fontWeight: "bold", minWidth: 18, height: 18, lineHeight: 18, borderRadius: 9 },
               }}
             />
             <Tab.Screen
@@ -100,6 +109,7 @@ function PatientTabs({ setRole }) {
 
 /* ── DOCTOR TABS ── */
 function DoctorTabs({ setRole }) {
+  const { appointmentBadge, refreshBadges } = useContext(NotificationContext);
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="DoctorMain">
@@ -122,6 +132,8 @@ function DoctorTabs({ setRole }) {
                 tabBarIcon: ({ color, size }) => (
                   <Ionicons name="calendar-outline" size={size} color={color} />
                 ),
+                tabBarBadge: appointmentBadge > 0 ? appointmentBadge : undefined,
+                tabBarBadgeStyle: { backgroundColor: "#E53935", fontSize: 10, fontWeight: "bold", minWidth: 18, height: 18, lineHeight: 18, borderRadius: 9 },
               }}
             />
             <Tab.Screen
@@ -148,6 +160,7 @@ export default function App() {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
+  const navigationRef = useRef(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -155,6 +168,37 @@ export default function App() {
       checkUser();
     }, 2600);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Register push notifications when user logs in
+  useEffect(() => {
+    if (role) {
+      registerForPushNotifications();
+    }
+  }, [role]);
+
+  // Handle notification taps — navigate to relevant screen
+  useEffect(() => {
+    const responseSubscription = setupNotificationResponseListener((data) => {
+      if (!navigationRef.current) return;
+
+      if (data.screen === "Chat" && data.appointmentId) {
+        navigationRef.current.navigate("Chat", {
+          appointmentId: data.appointmentId,
+          otherName: data.otherName || "Chat",
+          otherRole: data.otherRole || "",
+        });
+      } else if (data.screen === "Appointments") {
+        navigationRef.current.navigate("Appointments");
+      }
+    });
+
+    const foregroundSubscription = setupForegroundNotificationListener();
+
+    return () => {
+      responseSubscription?.remove();
+      foregroundSubscription?.remove();
+    };
   }, []);
 
   const checkUser = async () => {
@@ -183,42 +227,44 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <NotificationProvider>
+        <NavigationContainer ref={navigationRef}>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
 
-          {/* Auth */}
-          {role === null && (
-            <>
-              <Stack.Screen name="Login">
-                {(props) => <LoginScreen {...props} setRole={setRole} />}
+            {/* Auth */}
+            {role === null && (
+              <>
+                <Stack.Screen name="Login">
+                  {(props) => <LoginScreen {...props} setRole={setRole} />}
+                </Stack.Screen>
+                <Stack.Screen name="Register" component={RegisterScreen} />
+              </>
+            )}
+
+            {/* Patient */}
+            {role === "patient" && (
+              <Stack.Screen name="PatientHome">
+                {(props) => <PatientTabs {...props} setRole={setRole} />}
               </Stack.Screen>
-              <Stack.Screen name="Register" component={RegisterScreen} />
-            </>
-          )}
+            )}
 
-          {/* Patient */}
-          {role === "patient" && (
-            <Stack.Screen name="PatientHome">
-              {(props) => <PatientTabs {...props} setRole={setRole} />}
-            </Stack.Screen>
-          )}
+            {/* Doctor */}
+            {role === "doctor" && (
+              <Stack.Screen name="DoctorHome">
+                {(props) => <DoctorTabs {...props} setRole={setRole} />}
+              </Stack.Screen>
+            )}
 
-          {/* Doctor */}
-          {role === "doctor" && (
-            <Stack.Screen name="DoctorHome">
-              {(props) => <DoctorTabs {...props} setRole={setRole} />}
-            </Stack.Screen>
-          )}
+            {/* Admin */}
+            {role === "admin" && (
+              <Stack.Screen name="AdminDashboard">
+                {(props) => <AdminDashboard {...props} setRole={setRole} />}
+              </Stack.Screen>
+            )}
 
-          {/* Admin */}
-          {role === "admin" && (
-            <Stack.Screen name="AdminDashboard">
-              {(props) => <AdminDashboard {...props} setRole={setRole} />}
-            </Stack.Screen>
-          )}
-
-        </Stack.Navigator>
-      </NavigationContainer>
+          </Stack.Navigator>
+        </NavigationContainer>
+      </NotificationProvider>
     </ThemeProvider>
   );
 }

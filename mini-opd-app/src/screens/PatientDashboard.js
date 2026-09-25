@@ -15,7 +15,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { ThemeContext } from "../context/ThemeContext";
+import { NotificationContext } from "../context/NotificationContext";
 import { getAppointmentStats } from "../services/api";
+import NotificationModal from "../components/NotificationModal";
 
 const quickLinks = [
   { icon: "medkit-outline",                    label: "Find Doctor",  screen: "Doctors",      color: "#1565C0", bg: "#E3F2FD" },
@@ -36,12 +38,14 @@ const tips = [
 
 export default function PatientDashboard({ navigation }) {
   const { theme } = useContext(ThemeContext);
+  const { appointmentBadge, refreshBadges } = useContext(NotificationContext);
 
   const [user, setUser]           = useState({ name: "Patient" });
   const [stats, setStats]         = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
   const [refreshing, setRefreshing]     = useState(false);
   const [tip]                     = useState(tips[Math.floor(Math.random() * tips.length)]);
+  const [showNotifModal, setShowNotifModal] = useState(false);
 
   /* Load user from storage */
   const loadUser = async () => {
@@ -71,12 +75,14 @@ export default function PatientDashboard({ navigation }) {
     useCallback(() => {
       loadUser();
       loadStats(true);
+      refreshBadges?.();
     }, [])
   );
 
   const onRefresh = () => {
     setRefreshing(true);
     loadStats(true);
+    refreshBadges?.();
   };
 
   const greeting = () => {
@@ -87,42 +93,65 @@ export default function PatientDashboard({ navigation }) {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#1565C0"]} />
-      }
-    >
-      <StatusBar barStyle="light-content" backgroundColor="#1565C0" />
+    <>
+      <ScrollView
+        style={[styles.container, { backgroundColor: theme.background }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#1565C0"]} />
+        }
+      >
+        <StatusBar barStyle="light-content" backgroundColor="#1565C0" />
 
-      {/* ── Header Banner ── */}
-      <LinearGradient colors={["#1565C0", "#0288D1"]} style={styles.banner}>
-        <View style={styles.bannerRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.greetText}>{greeting()},</Text>
-            <Text style={styles.nameText} numberOfLines={1}>
-              {user.name}
-            </Text>
-            <Text style={styles.bannerSub}>How are you feeling today?</Text>
+        {/* ── Header Banner ── */}
+        <LinearGradient colors={["#1565C0", "#0288D1"]} style={styles.banner}>
+          <View style={styles.bannerRow}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={styles.greetText}>{greeting()},</Text>
+              <Text style={styles.nameText} numberOfLines={1}>
+                {user.name}
+              </Text>
+              <Text style={styles.bannerSub}>How are you feeling today?</Text>
+            </View>
+
+            {/* Header Right: Notification Icon + Avatar */}
+            <View style={styles.headerRight}>
+              <TouchableOpacity
+                style={styles.notifBtn}
+                onPress={() => setShowNotifModal(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="notifications-outline" size={22} color="#fff" />
+                {appointmentBadge > 0 && (
+                  <View style={styles.notifBadge}>
+                    <Text style={styles.notifBadgeText}>
+                      {appointmentBadge > 9 ? "9+" : appointmentBadge}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Profile")}
+                activeOpacity={0.85}
+              >
+                {user.profileImage ? (
+                  <Image source={{ uri: user.profileImage }} style={styles.avatar} />
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <Ionicons name="person" size={24} color="#fff" />
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {/* Avatar */}
-          {user.profileImage ? (
-            <Image source={{ uri: user.profileImage }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Ionicons name="person" size={28} color="#fff" />
-            </View>
-          )}
-        </View>
-
-        {/* Health tip chip */}
-        <View style={styles.tipChip}>
-          <Ionicons name="bulb-outline" size={14} color="#FFD54F" />
-          <Text style={styles.tipText} numberOfLines={2}>{tip}</Text>
-        </View>
-      </LinearGradient>
+          {/* Health tip chip */}
+          <View style={styles.tipChip}>
+            <Ionicons name="bulb-outline" size={14} color="#FFD54F" />
+            <Text style={styles.tipText} numberOfLines={2}>{tip}</Text>
+          </View>
+        </LinearGradient>
 
       {/* ── Quick Actions ── */}
       <View style={styles.section}>
@@ -251,6 +280,15 @@ export default function PatientDashboard({ navigation }) {
 
       <View style={{ height: 30 }} />
     </ScrollView>
+
+    {/* ── Notification Center Sheet Modal ── */}
+    <NotificationModal
+      visible={showNotifModal}
+      onClose={() => setShowNotifModal(false)}
+      navigation={navigation}
+      role="patient"
+    />
+  </>
   );
 }
 
@@ -273,12 +311,47 @@ const styles = StyleSheet.create({
   greetText:  { color: "rgba(255,255,255,0.8)", fontSize: 14 },
   nameText:   { color: "#fff", fontSize: 22, fontWeight: "bold", marginTop: 2 },
   bannerSub:  { color: "rgba(255,255,255,0.7)", fontSize: 13, marginTop: 4 },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  notifBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+  },
+  notifBadge: {
+    position: "absolute",
+    top: -3,
+    right: -3,
+    backgroundColor: "#E53935",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: "#1565C0",
+  },
+  notifBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
   avatar: {
-    width: 60, height: 60, borderRadius: 30,
+    width: 52, height: 52, borderRadius: 26,
     borderWidth: 2, borderColor: "rgba(255,255,255,0.6)",
   },
   avatarFallback: {
-    width: 60, height: 60, borderRadius: 30,
+    width: 52, height: 52, borderRadius: 26,
     backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center", alignItems: "center",
     borderWidth: 2, borderColor: "rgba(255,255,255,0.4)",
