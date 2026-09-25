@@ -166,7 +166,7 @@ export default function App() {
     const timer = setTimeout(() => {
       setShowSplash(false);
       checkUser();
-    }, 2600);
+    }, 2900);
     return () => clearTimeout(timer);
   }, []);
 
