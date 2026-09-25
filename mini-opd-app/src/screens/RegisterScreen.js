@@ -23,6 +23,7 @@ export default function RegisterScreen({ navigation }) {
   const [role, setRole] = useState("patient");
   const [specialization, setSpecialization] = useState("");
   const [experience, setExperience] = useState("");
+  const [licenseNumber, setLicenseNumber] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -44,10 +45,20 @@ export default function RegisterScreen({ navigation }) {
         role,
         specialization: role === "doctor" ? specialization.trim() : "",
         experience: role === "doctor" ? Number(experience) : 0,
+        medicalLicenseNumber: role === "doctor" ? licenseNumber.trim() : "",
       });
-      Alert.alert("Account Created", "Registration successful. Please sign in.", [
-        { text: "OK", onPress: () => navigation.replace("Login") },
-      ]);
+
+      if (role === "doctor") {
+        Alert.alert(
+          "Registration Submitted",
+          "Your doctor profile has been submitted and is currently pending approval by hospital administration.\n\nOnce the administrator reviews and approves your credentials, you will be able to log in.",
+          [{ text: "Understood", onPress: () => navigation.replace("Login") }]
+        );
+      } else {
+        Alert.alert("Account Created", "Registration successful. Please sign in.", [
+          { text: "Sign In", onPress: () => navigation.replace("Login") },
+        ]);
+      }
     } catch (error) {
       const msg = error?.response?.data?.message || "Registration failed.";
       Alert.alert("Error", msg);
@@ -181,6 +192,18 @@ export default function RegisterScreen({ navigation }) {
                     placeholder="e.g. Cardiologist, General Physician"
                     onChangeText={setSpecialization}
                     value={specialization}
+                    style={styles.inputField}
+                  />
+                </View>
+
+                <Text style={styles.fieldLabel}>Medical License # (PMDC / Council)</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="badge-outline" size={20} color="#888" style={styles.inputIcon} />
+                  <CustomInput
+                    placeholder="e.g. PMDC-12345-M"
+                    onChangeText={setLicenseNumber}
+                    value={licenseNumber}
+                    autoCapitalize="characters"
                     style={styles.inputField}
                   />
                 </View>

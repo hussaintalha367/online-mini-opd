@@ -40,9 +40,21 @@ export default function LoginScreen({ navigation, setRole }) {
 
       setRole(data.user.role);
     } catch (error) {
-      const msg =
-        error?.response?.data?.message || "Invalid credentials. Try again.";
-      Alert.alert("Login Failed", msg);
+      const errData = error?.response?.data;
+      if (errData?.isPendingApproval || errData?.verificationStatus === "pending") {
+        Alert.alert(
+          "⏳ Approval Pending",
+          "Your doctor profile has been registered but is awaiting verification by hospital administration.\n\nYou will be able to access the OPD portal as soon as your account is approved."
+        );
+      } else if (errData?.verificationStatus === "rejected") {
+        Alert.alert(
+          "🚫 Application Declined",
+          "Your doctor registration was declined by hospital administration. Please contact administration for further details."
+        );
+      } else {
+        const msg = errData?.message || "Invalid credentials. Try again.";
+        Alert.alert("Login Failed", msg);
+      }
     } finally {
       setLoading(false);
     }

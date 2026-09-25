@@ -34,6 +34,7 @@ router.post("/register", async (req, res) => {
     specialization: Joi.string().allow("").optional(),
     experience: Joi.number().min(0).optional(),
     phone: Joi.string().allow("").optional(),
+    medicalLicenseNumber: Joi.string().allow("").optional(),
   });
 
   const { error } = schema.validate(req.body);
@@ -42,7 +43,7 @@ router.post("/register", async (req, res) => {
     return res.status(400).json({ message: error.details[0].message });
   }
 
-  const { name, email, password, role, specialization, experience, phone } = req.body;
+  const { name, email, password, role, specialization, experience, phone, medicalLicenseNumber } = req.body;
 
   // ✅ Prevent public admin registration
   if (role === "admin") {
@@ -56,6 +57,7 @@ router.post("/register", async (req, res) => {
   }
 
   const hashed = await bcrypt.hash(password, 10);
+  const isDoctor = role === "doctor";
 
   const user = new User({
     name,
@@ -65,10 +67,21 @@ router.post("/register", async (req, res) => {
     specialization: specialization || "",
     experience: experience || 0,
     phone: phone || "",
+    medicalLicenseNumber: medicalLicenseNumber || "",
+    // Doctors require admin approval before they can practice or log in
+    isVerified: !isDoctor,
+    verificationStatus: isDoctor ? "pending" : "approved",
+    verificationNotes: isDoctor ? "Pending administrative license and credential review" : "",
   });
   await user.save();
 
-  res.json({ message: "User registered ✅" });
+  res.json({
+    message: isDoctor
+      ? "Doctor registered successfully! Your profile is pending administrative approval before you can log in."
+      : "User registered successfully ✅",
+    isPendingApproval: isDoctor,
+    role,
+  });
 });
 
 /* ---------------- LOGIN ---------------- */
@@ -98,6 +111,23 @@ router.post("/login", async (req, res) => {
     return res.status(403).json({ message: "Account is blocked by admin" });
   }
 
+  // ✅ Prevent unapproved doctor login
+  if (user.role === "doctor") {
+    if (user.verificationStatus === "pending") {
+      return res.status(403).json({
+        message: "Your doctor account is pending administrative approval. You can log in once the admin verifies and approves your credentials.",
+        isPendingApproval: true,
+        verificationStatus: "pending",
+      });
+    }
+    if (user.verificationStatus === "rejected") {
+      return res.status(403).json({
+        message: "Your doctor registration was declined by hospital administration. Please contact support.",
+        verificationStatus: "rejected",
+      });
+    }
+  }
+
   const isMatch = await bcrypt.compare(password, user.password);
 
   if (!isMatch) {
@@ -113,14 +143,17 @@ router.post("/login", async (req, res) => {
   res.json({
     token,
     user: {
-      id:             user._id,
-      name:           user.name,
-      email:          user.email,
-      role:           user.role,
-      phone:          user.phone          || "",
-      specialization: user.specialization || "",
-      experience:     user.experience     || 0,
-      profileImage:   user.profileImage   || "",
+      id:                   user._id,
+      name:                 user.name,
+      email:                user.email,
+      role:                 user.role,
+      phone:                user.phone                || "",
+      specialization:       user.specialization       || "",
+      experience:           user.experience           || 0,
+      profileImage:         user.profileImage         || "",
+      medicalLicenseNumber: user.medicalLicenseNumber || "",
+      isVerified:           user.isVerified,
+      verificationStatus:   user.verificationStatus   || "approved",
     }
   });
 });

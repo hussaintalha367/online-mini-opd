@@ -4,7 +4,15 @@ const User = require("../models/User");
 const router = express.Router();
 
 router.get("/", async (req, res) => {
-  const doctors = await User.find({ role: "doctor" });
+  // Only display verified/approved, non-blocked doctors to patients
+  const doctors = await User.find({
+    role: "doctor",
+    isBlocked: false,
+    $or: [
+      { verificationStatus: "approved" },
+      { verificationStatus: { $exists: false } },
+    ],
+  });
   res.json(doctors);
 });
 
