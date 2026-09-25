@@ -153,7 +153,7 @@ export default function SplashScreen() {
     // 5. Progress bar animation
     Animated.timing(progressAnim, {
       toValue: 1,
-      duration: 2800,
+      duration: 4400,
       easing: Easing.inOut(Easing.quad),
       useNativeDriver: false,
     }).start();
@@ -190,7 +190,7 @@ export default function SplashScreen() {
     // Status message cycling
     const messageInterval = setInterval(() => {
       setStatusIndex((prev) => (prev + 1) % STATUS_MESSAGES.length);
-    }, 900);
+    }, 1100);
 
     return () => {
       rotateLoop.stop();
