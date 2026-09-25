@@ -107,9 +107,9 @@ export default function Dashboard({ token }) {
   const [refreshing, setRefreshing] = useState(false);
   const [timeRange, setTimeRange] = useState("all"); // '7days', '30days', 'all'
 
-  const loadData = useCallback(async (isManual = false) => {
+  const loadData = useCallback(async (isManual = false, isBackground = false) => {
     if (isManual) setRefreshing(true);
-    else setLoading(true);
+    else if (!isBackground) setLoading(true);
 
     try {
       const [usersRes, apptRes] = await Promise.all([
@@ -121,13 +121,18 @@ export default function Dashboard({ token }) {
     } catch (e) {
       console.error("Dashboard data load error:", e);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
       setRefreshing(false);
     }
   }, [token]);
 
   useEffect(() => {
     loadData();
+    // Auto-refresh dashboard data every 8 seconds
+    const interval = setInterval(() => {
+      loadData(false, true);
+    }, 8000);
+    return () => clearInterval(interval);
   }, [loadData]);
 
   /* ── Filtered Appointments by Selected Time Range ── */

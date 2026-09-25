@@ -43,19 +43,25 @@ export default function Users({ token }) {
   const [loading, setLoading] = useState(true);
   const [blockingId, setBlockingId] = useState(null);
 
-  const loadUsers = useCallback(async () => {
+  const loadUsers = useCallback(async (isBackground = false) => {
     try {
+      if (!isBackground) setLoading(true);
       const res = await getAllUsers(token);
       setUsers(res.data || []);
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   }, [token]);
 
   useEffect(() => {
     loadUsers();
+    // Auto-refresh users list every 8 seconds
+    const interval = setInterval(() => {
+      loadUsers(true);
+    }, 8000);
+    return () => clearInterval(interval);
   }, [loadUsers]);
 
   const filteredUsers = useMemo(() => {

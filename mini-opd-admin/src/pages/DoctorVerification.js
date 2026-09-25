@@ -89,22 +89,30 @@ export default function DoctorVerification({ token }) {
   // Toast notifications
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
-  const loadDoctors = useCallback(async () => {
+  const loadDoctors = useCallback(async (isBackground = false) => {
     try {
+      if (!isBackground) setLoading(true);
       const res = await getAllUsers(token);
       const allUsers = res.data || [];
       const docList = allUsers.filter((u) => u.role === "doctor");
       setDoctors(docList);
     } catch (e) {
       console.error("Failed to load doctors:", e);
-      setSnackbar({ open: true, message: "Error loading doctor registry", severity: "error" });
+      if (!isBackground) {
+        setSnackbar({ open: true, message: "Error loading doctor registry", severity: "error" });
+      }
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   }, [token]);
 
   useEffect(() => {
     loadDoctors();
+    // Auto-refresh doctor verification registry every 8 seconds
+    const interval = setInterval(() => {
+      loadDoctors(true);
+    }, 8000);
+    return () => clearInterval(interval);
   }, [loadDoctors]);
 
   // Statistics

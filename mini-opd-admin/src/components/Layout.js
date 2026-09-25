@@ -178,18 +178,38 @@ export default function Layout({ children, setToken }) {
             Online Mini OPD — Admin
           </Typography>
 
-          <Chip
-            label="Live"
-            size="small"
-            sx={{
-              bgcolor: "#43A047",
-              color: "#fff",
-              fontSize: 11,
-              fontWeight: 700,
-              mr: 2,
-              height: 22,
-            }}
-          />
+          <Tooltip title="Live auto-sync enabled: clinical data, users, and appointments automatically refresh every 8 seconds">
+            <Chip
+              icon={
+                <Box
+                  sx={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    bgcolor: "#69F0AE",
+                    ml: 1,
+                    animation: "pulse 1.8s infinite",
+                    "@keyframes pulse": {
+                      "0%": { transform: "scale(0.9)", opacity: 0.7 },
+                      "50%": { transform: "scale(1.4)", opacity: 1 },
+                      "100%": { transform: "scale(0.9)", opacity: 0.7 },
+                    },
+                  }}
+                />
+              }
+              label="Live Sync (8s)"
+              size="small"
+              sx={{
+                bgcolor: "rgba(255,255,255,0.18)",
+                color: "#fff",
+                fontSize: 11,
+                fontWeight: 700,
+                mr: 2,
+                height: 24,
+                border: "1px solid rgba(255,255,255,0.3)",
+              }}
+            />
+          </Tooltip>
 
           <Tooltip title="Logout">
             <IconButton color="inherit" onClick={handleLogout}>

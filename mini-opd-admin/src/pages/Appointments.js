@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -43,35 +43,43 @@ export default function Appointments({ token }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await getAllAppointments(token);
-        setAppointments(res.data || []);
-        setFiltered(res.data || []);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [token]);
-
-  const applyFilters = (text, status) => {
-    let list = appointments;
+  const applyFilters = useCallback((text, status, list = appointments) => {
+    let res = list;
     if (status !== "all") {
-      list = list.filter((a) => a.status === status);
+      res = res.filter((a) => a.status === status);
     }
     if (text.trim()) {
-      list = list.filter(
+      res = res.filter(
         (a) =>
           a.doctor?.name?.toLowerCase().includes(text.toLowerCase()) ||
           a.patient?.name?.toLowerCase().includes(text.toLowerCase())
       );
     }
-    setFiltered(list);
-  };
+    setFiltered(res);
+  }, [appointments]);
+
+  const load = useCallback(async (isBackground = false) => {
+    try {
+      if (!isBackground) setLoading(true);
+      const res = await getAllAppointments(token);
+      const data = res.data || [];
+      setAppointments(data);
+      applyFilters(search, statusFilter, data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
+  }, [token, search, statusFilter, applyFilters]);
+
+  useEffect(() => {
+    load();
+    // Auto-refresh appointments every 8 seconds
+    const interval = setInterval(() => {
+      load(true);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   const handleSearch = (e) => {
     setSearch(e.target.value);
