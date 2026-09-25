@@ -198,7 +198,7 @@ export default function RegisterScreen({ navigation }) {
 
                 <Text style={styles.fieldLabel}>Medical License # (PMDC / Council)</Text>
                 <View style={styles.inputWrapper}>
-                  <Ionicons name="badge-outline" size={20} color="#888" style={styles.inputIcon} />
+                  <Ionicons name="id-card-outline" size={20} color="#888" style={styles.inputIcon} />
                   <CustomInput
                     placeholder="e.g. PMDC-12345-M"
                     onChangeText={setLicenseNumber}
