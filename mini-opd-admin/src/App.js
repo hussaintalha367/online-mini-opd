@@ -10,7 +10,16 @@ import Users from "./pages/Users";
 import Appointments from "./pages/Appointments";
 
 function App() {
-  const [token, setToken] = useState(null);
+  const [token, setTokenState] = useState(() => localStorage.getItem("adminToken"));
+
+  const setToken = (newToken) => {
+    setTokenState(newToken);
+    if (newToken) {
+      localStorage.setItem("adminToken", newToken);
+    } else {
+      localStorage.removeItem("adminToken");
+    }
+  };
 
   if (!token) {
     return (

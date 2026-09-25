@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -8,7 +8,6 @@ import {
   TableRow,
   TableCell,
   TableContainer,
-  Paper,
   Avatar,
   Chip,
   IconButton,
@@ -17,13 +16,19 @@ import {
   InputAdornment,
   CircularProgress,
   Card,
+  Button,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import {
   Block as BlockIcon,
   CheckCircle as UnblockIcon,
   Search as SearchIcon,
+  FileDownload as ExportIcon,
+  Print as PrintIcon,
 } from "@mui/icons-material";
 import { getAllUsers, toggleBlockUser } from "../services/api";
+import { exportToCSV, printReport } from "../utils/exportUtils";
 
 const ROLE_COLORS = {
   doctor:  { color: "#1565C0", bg: "#E3F2FD" },
@@ -33,8 +38,8 @@ const ROLE_COLORS = {
 
 export default function Users({ token }) {
   const [users, setUsers] = useState([]);
-  const [filtered, setFiltered] = useState([]);
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [blockingId, setBlockingId] = useState(null);
 
@@ -42,7 +47,6 @@ export default function Users({ token }) {
     try {
       const res = await getAllUsers(token);
       setUsers(res.data || []);
-      setFiltered(res.data || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -54,17 +58,58 @@ export default function Users({ token }) {
     loadUsers();
   }, [loadUsers]);
 
-  const handleSearch = (e) => {
-    const val = e.target.value;
-    setSearch(val);
-    setFiltered(
-      users.filter(
-        (u) =>
-          u.name.toLowerCase().includes(val.toLowerCase()) ||
-          u.email.toLowerCase().includes(val.toLowerCase()) ||
-          u.role.toLowerCase().includes(val.toLowerCase())
-      )
-    );
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) => {
+      // Role / status filter
+      if (roleFilter === "doctor" && u.role !== "doctor") return false;
+      if (roleFilter === "patient" && u.role !== "patient") return false;
+      if (roleFilter === "blocked" && !u.isBlocked) return false;
+
+      // Text search
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const matchesName = u.name?.toLowerCase().includes(q);
+        const matchesEmail = u.email?.toLowerCase().includes(q);
+        const matchesRole = u.role?.toLowerCase().includes(q);
+        const matchesSpec = u.specialization?.toLowerCase().includes(q);
+        if (!matchesName && !matchesEmail && !matchesRole && !matchesSpec) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [users, roleFilter, search]);
+
+  const handleExportCSV = () => {
+    const data = filteredUsers.map((u, idx) => ({
+      "#": idx + 1,
+      "Name": u.name || "",
+      "Email": u.email || "",
+      "Role": u.role ? u.role.toUpperCase() : "",
+      "Specialization": u.specialization || "N/A",
+      "Experience (Years)": u.experience || "N/A",
+      "Phone": u.phone || "N/A",
+      "Status": u.isBlocked ? "Blocked" : "Active",
+      "Registered On": u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "N/A",
+    }));
+    exportToCSV(`MiniOPD_Users_${roleFilter}`, data);
+  };
+
+  const handlePrint = () => {
+    printReport({
+      title: "User Directory & Roster",
+      subtitle: `Filter: ${roleFilter.toUpperCase()} (${filteredUsers.length} records)`,
+      columns: ["#", "Name", "Email", "Role", "Specialization", "Phone", "Status"],
+      rows: filteredUsers.map((u, idx) => [
+        idx + 1,
+        u.name || "—",
+        u.email || "—",
+        u.role ? u.role.toUpperCase() : "—",
+        u.specialization || "—",
+        u.phone || "—",
+        u.isBlocked ? "BLOCKED" : "ACTIVE",
+      ]),
+    });
   };
 
   const handleBlock = async (id) => {
@@ -80,21 +125,88 @@ export default function Users({ token }) {
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
+      <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 2 }}>
         <Box>
           <Typography variant="h5" fontWeight={700}>
             User Management
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {users.length} total users registered
+            {users.length} total registered accounts across all roles
           </Typography>
         </Box>
+
+        {/* Action Buttons */}
+        <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<PrintIcon />}
+            onClick={handlePrint}
+            disabled={filteredUsers.length === 0}
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+          >
+            Print / PDF
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<ExportIcon />}
+            onClick={handleExportCSV}
+            disabled={filteredUsers.length === 0}
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, bgcolor: "#1565C0" }}
+          >
+            Export CSV
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Filter and Search Bar */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, flexWrap: "wrap", gap: 2 }}>
+        <ToggleButtonGroup
+          value={roleFilter}
+          exclusive
+          onChange={(_, val) => val && setRoleFilter(val)}
+          size="small"
+          sx={{ flexWrap: "wrap", gap: 0.5 }}
+        >
+          {[
+            { id: "all", label: "All Users", count: users.length },
+            { id: "doctor", label: "Doctors", count: users.filter((u) => u.role === "doctor").length },
+            { id: "patient", label: "Patients", count: users.filter((u) => u.role === "patient").length },
+            { id: "blocked", label: "Blocked", count: users.filter((u) => u.isBlocked).length },
+          ].map((tab) => (
+            <ToggleButton
+              key={tab.id}
+              value={tab.id}
+              sx={{
+                borderRadius: "20px !important",
+                textTransform: "none",
+                fontWeight: 600,
+                fontSize: 12,
+                px: 2,
+                border: "1px solid #E8ECF4 !important",
+                "&.Mui-selected": {
+                  bgcolor: "#E3F2FD",
+                  color: "#1565C0",
+                  borderColor: "#1565C044 !important",
+                },
+              }}
+            >
+              {tab.label}
+              <Chip
+                label={tab.count}
+                size="small"
+                sx={{ ml: 0.8, height: 18, fontSize: 11, "& .MuiChip-label": { px: 0.8 } }}
+              />
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
 
         <TextField
           size="small"
           placeholder="Search by name, email, role..."
           value={search}
-          onChange={handleSearch}
+          onChange={(e) => setSearch(e.target.value)}
           sx={{ width: 280, "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
           InputProps={{
             startAdornment: (
@@ -125,14 +237,14 @@ export default function Users({ token }) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filtered.length === 0 && (
+                {filteredUsers.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 6, color: "text.disabled" }}>
                       No users found
                     </TableCell>
                   </TableRow>
                 )}
-                {filtered.map((user) => {
+                {filteredUsers.map((user) => {
                   const roleStyle = ROLE_COLORS[user.role] || {};
                   return (
                     <TableRow

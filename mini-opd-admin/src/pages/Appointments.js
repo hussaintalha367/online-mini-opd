@@ -14,11 +14,17 @@ import {
   InputAdornment,
   CircularProgress,
   Avatar,
+  Button,
   ToggleButton,
   ToggleButtonGroup,
 } from "@mui/material";
-import { Search as SearchIcon } from "@mui/icons-material";
+import {
+  Search as SearchIcon,
+  FileDownload as ExportIcon,
+  Print as PrintIcon,
+} from "@mui/icons-material";
 import { getAllAppointments } from "../services/api";
+import { exportToCSV, printReport } from "../utils/exportUtils";
 
 const STATUS_CONFIG = {
   pending:   { color: "#E65100", bg: "#FFF3E0" },
@@ -78,16 +84,76 @@ export default function Appointments({ token }) {
     applyFilters(search, val);
   };
 
+  const handleExportCSV = () => {
+    const data = filtered.map((item, idx) => ({
+      "#": idx + 1,
+      "Appointment ID": item._id,
+      "Doctor": item.doctor?.name ? `Dr. ${item.doctor.name}` : "N/A",
+      "Specialization": item.doctor?.specialization || "General",
+      "Patient": item.patient?.name || "N/A",
+      "Patient Email": item.patient?.email || "N/A",
+      "Date": item.date || "N/A",
+      "Time": item.time || "N/A",
+      "Status": item.status ? item.status.toUpperCase() : "PENDING",
+      "Prescription": item.prescription ? "Available" : "None",
+      "Created At": item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "N/A",
+    }));
+    exportToCSV(`MiniOPD_Appointments_${statusFilter}`, data);
+  };
+
+  const handlePrint = () => {
+    printReport({
+      title: "Appointments Schedule & Report",
+      subtitle: `Status: ${statusFilter.toUpperCase()} (${filtered.length} records)`,
+      columns: ["#", "Doctor", "Specialization", "Patient", "Date", "Time", "Status"],
+      rows: filtered.map((item, idx) => [
+        idx + 1,
+        item.doctor?.name ? `Dr. ${item.doctor.name}` : "—",
+        item.doctor?.specialization || "General",
+        item.patient?.name || "—",
+        item.date || "—",
+        item.time || "—",
+        item.status ? item.status.toUpperCase() : "PENDING",
+      ]),
+    });
+  };
+
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" fontWeight={700}>
-          Appointments
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {appointments.length} total appointments in the system
-        </Typography>
+      <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 2 }}>
+        <Box>
+          <Typography variant="h5" fontWeight={700}>
+            Appointments
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {appointments.length} total appointments in the system
+          </Typography>
+        </Box>
+
+        {/* Action Buttons */}
+        <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<PrintIcon />}
+            onClick={handlePrint}
+            disabled={filtered.length === 0}
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+          >
+            Print / PDF
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<ExportIcon />}
+            onClick={handleExportCSV}
+            disabled={filtered.length === 0}
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, bgcolor: "#1565C0" }}
+          >
+            Export CSV
+          </Button>
+        </Box>
       </Box>
 
       {/* Filters Row */}
