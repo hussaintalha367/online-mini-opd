@@ -8,6 +8,7 @@ import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import Appointments from "./pages/Appointments";
+import DoctorVerification from "./pages/DoctorVerification";
 
 function App() {
   const [token, setTokenState] = useState(() => localStorage.getItem("adminToken"));
@@ -38,6 +39,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard"    element={<Dashboard    token={token} />} />
+            <Route path="/doctors"      element={<DoctorVerification token={token} />} />
             <Route path="/users"        element={<Users        token={token} />} />
             <Route path="/appointments" element={<Appointments token={token} />} />
           </Routes>

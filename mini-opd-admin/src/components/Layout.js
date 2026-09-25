@@ -22,15 +22,17 @@ import {
   LocalHospital as HospitalIcon,
   Logout as LogoutIcon,
   Menu as MenuIcon,
+  VerifiedUser as VerifiedIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const DRAWER_WIDTH = 250;
 
 const NAV_ITEMS = [
-  { label: "Dashboard",    icon: <DashboardIcon />, path: "/dashboard" },
-  { label: "Users",        icon: <PeopleIcon />,    path: "/users" },
-  { label: "Appointments", icon: <CalendarIcon />,  path: "/appointments" },
+  { label: "Dashboard",             icon: <DashboardIcon />, path: "/dashboard" },
+  { label: "Doctors & Verification", icon: <VerifiedIcon />,  path: "/doctors" },
+  { label: "Users Registry",        icon: <PeopleIcon />,    path: "/users" },
+  { label: "Appointments",          icon: <CalendarIcon />,  path: "/appointments" },
 ];
 
 export default function Layout({ children, setToken }) {
