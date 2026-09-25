@@ -18,22 +18,30 @@ router.get("/appointments", auth, roleMiddleware("admin"), async (req, res) => {
     .populate("patient doctor");
   res.json(appointments);
 });
-// ✅ Block user
+// ✅ Block/toggle user
 router.put("/block/:id", auth, roleMiddleware("admin"), async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    user.isBlocked = true;
+    // If explicit boolean passed, use it, otherwise toggle the current status
+    if (typeof req.body.isBlocked === "boolean") {
+      user.isBlocked = req.body.isBlocked;
+    } else {
+      user.isBlocked = !user.isBlocked;
+    }
     await user.save();
 
-    res.json({ message: "User blocked ✅", isBlocked: user.isBlocked });
+    res.json({
+      message: user.isBlocked ? "User blocked ✅" : "User unblocked ✅",
+      isBlocked: user.isBlocked,
+    });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// ✅ Unblock user (separate route — fixes mobile app /admin/unblock/:id call)
+// ✅ Unblock user (explicit route)
 router.put("/unblock/:id", auth, roleMiddleware("admin"), async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -42,7 +50,7 @@ router.put("/unblock/:id", auth, roleMiddleware("admin"), async (req, res) => {
     user.isBlocked = false;
     await user.save();
 
-    res.json({ message: "User unblocked ✅", isBlocked: user.isBlocked });
+    res.json({ message: "User unblocked ✅", isBlocked: false });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }

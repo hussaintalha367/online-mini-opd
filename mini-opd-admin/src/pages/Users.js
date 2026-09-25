@@ -112,11 +112,13 @@ export default function Users({ token }) {
     });
   };
 
-  const handleBlock = async (id) => {
-    setBlockingId(id);
+  const handleToggleBlock = async (user) => {
+    setBlockingId(user._id);
     try {
-      await toggleBlockUser(token, id);
+      await toggleBlockUser(token, user._id, user.isBlocked);
       await loadUsers();
+    } catch (e) {
+      console.error("Toggle block error:", e);
     } finally {
       setBlockingId(null);
     }
@@ -316,7 +318,7 @@ export default function Users({ token }) {
                             <span>
                               <IconButton
                                 size="small"
-                                onClick={() => handleBlock(user._id)}
+                                onClick={() => handleToggleBlock(user)}
                                 disabled={blockingId === user._id}
                                 color={user.isBlocked ? "success" : "error"}
                               >

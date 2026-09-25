@@ -14,14 +14,31 @@ export const getAllAppointments = (token) =>
   axios.get(`${BASE_URL}/admin/appointments`, {
     headers: { Authorization: `Bearer ${token}` }
   });
-export const toggleBlockUser = (token, id) =>
+export const blockUser = (token, id) =>
   axios.put(
     `${BASE_URL}/admin/block/${id}`,
-    {},
+    { isBlocked: true },
     {
       headers: { Authorization: `Bearer ${token}` }
     }
   );
+
+export const unblockUser = (token, id) =>
+  axios.put(
+    `${BASE_URL}/admin/unblock/${id}`,
+    { isBlocked: false },
+    {
+      headers: { Authorization: `Bearer ${token}` }
+    }
+  );
+
+export const toggleBlockUser = (token, id, isBlocked) => {
+  if (isBlocked) {
+    return unblockUser(token, id);
+  } else {
+    return blockUser(token, id);
+  }
+};
 
 export const verifyDoctor = (token, id, { status, notes }) =>
   axios.put(
