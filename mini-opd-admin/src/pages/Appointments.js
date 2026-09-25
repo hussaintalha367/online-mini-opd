@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -38,58 +38,55 @@ const STATUS_TABS = ["all", "pending", "approved", "rejected", "completed"];
 
 export default function Appointments({ token }) {
   const [appointments, setAppointments] = useState([]);
-  const [filtered, setFiltered] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
-  const applyFilters = useCallback((text, status, list = appointments) => {
-    let res = list;
-    if (status !== "all") {
-      res = res.filter((a) => a.status === status);
-    }
-    if (text.trim()) {
-      res = res.filter(
-        (a) =>
-          a.doctor?.name?.toLowerCase().includes(text.toLowerCase()) ||
-          a.patient?.name?.toLowerCase().includes(text.toLowerCase())
-      );
-    }
-    setFiltered(res);
-  }, [appointments]);
-
+  // Load appointments - only runs on mount or silent background poll
   const load = useCallback(async (isBackground = false) => {
     try {
       if (!isBackground) setLoading(true);
       const res = await getAllAppointments(token);
-      const data = res.data || [];
-      setAppointments(data);
-      applyFilters(search, statusFilter, data);
+      setAppointments(res.data || []);
     } catch (e) {
-      console.error(e);
+      console.error("Failed to load appointments:", e);
     } finally {
       if (!isBackground) setLoading(false);
     }
-  }, [token, search, statusFilter, applyFilters]);
+  }, [token]);
 
   useEffect(() => {
     load();
-    // Auto-refresh appointments every 8 seconds
+    // Silent background auto-refresh every 10 seconds (no spinner)
     const interval = setInterval(() => {
       load(true);
-    }, 8000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [load]);
 
+  // Derived filtered list via useMemo - avoids infinite loops
+  const filtered = useMemo(() => {
+    return appointments.filter((item) => {
+      if (statusFilter !== "all" && item.status !== statusFilter) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const docName = item.doctor?.name?.toLowerCase() || "";
+        const patName = item.patient?.name?.toLowerCase() || "";
+        const spec = item.doctor?.specialization?.toLowerCase() || "";
+        if (!docName.includes(q) && !patName.includes(q) && !spec.includes(q)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [appointments, statusFilter, search]);
+
   const handleSearch = (e) => {
     setSearch(e.target.value);
-    applyFilters(e.target.value, statusFilter);
   };
 
   const handleStatusFilter = (_, val) => {
-    if (!val) return;
-    setStatusFilter(val);
-    applyFilters(search, val);
+    if (val) setStatusFilter(val);
   };
 
   const handleExportCSV = () => {
